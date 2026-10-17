@@ -1,0 +1,35 @@
+/* Temporary Workers dashboard: government-style tweaks on top of Bootstrap 5 */
+body { background: #F7F7F7; }
+.navbar { border-bottom: 4px solid #FCBA19; }
+.navbar .navbar-brand { font-weight: 700; }
+.status-bar { font-size: 0.9rem; color: #313132; background: #fff;
+  border-bottom: 1px solid #E0E0E0; padding: 6px 16px; }
+.status-bar strong { color: #003366; }
+.chart-title { font-size: 1.02rem; font-weight: 700; margin: 0; color: #1A1A1A; line-height: 1.35; }
+h3 { font-size: 1rem; font-weight: 700; margin-top: 1rem; color: #003366; }
+.source-line { font-size: 0.78rem; color: #4A4A4A; margin: 0; }
+.source-line a { color: #1A5A96; }
+.card-footer { background: #FAFAFA; }
+.takeaways li { margin-bottom: 0.6rem; line-height: 1.45; }
+.kpi-row .value-box-value { font-size: 1.6rem; }
+.kpi-row .value-box-title { font-size: 0.85rem; font-weight: 600; }
+.kpi-row p, .kpi-row span { font-size: 0.82rem; }
+.caveat { font-size: 0.88rem; padding: 0.6rem 0.9rem; margin-bottom: 0.75rem; }
+.sidebar-help { font-size: 0.82rem; color: #444; }
+.ref-table td, .ref-table th, .mapping-table td, .mapping-table th { font-size: 0.82rem; }
+.ref-table caption { caption-side: top; font-size: 0.82rem; color: #333; }
+a:focus, button:focus, input:focus, .irs:focus-within { outline: 3px solid #FCBA19 !important; outline-offset: 2px; }
+.skip-link { position: absolute; left: -999px; }
+.skip-link:focus { left: 8px; top: 8px; z-index: 2000; background: #fff; padding: 6px 10px; }
+
+/* Round 2 review: smaller value-box icons, and a navbar title that fits phones */
+.bslib-value-box .value-box-showcase .bi, .bslib-value-box .value-box-showcase svg { width: 2rem !important; height: 2rem !important; }
+@media (max-width: 575px) {
+  .navbar .navbar-brand { font-size: 1rem; white-space: normal; max-width: 75%; }
+  .chart-title { font-size: 0.95rem; }
+}
+/* Round 3 review: tighter rows so all 13 provinces/territories fit beside the chart */
+#geography-rank_table table.dataTable td, #geography-rank_table table.dataTable th { padding: 3px 8px; font-size: 0.85rem; }
+/* Employer review: glossary */
+.glossary dt { font-weight: 700; color: #003366; font-size: 0.85rem; margin-top: 0.3rem; }
+.glossary dd { font-size: 0.82rem; margin: 0 0 0.2rem 0; }
