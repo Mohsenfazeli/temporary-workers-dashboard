@@ -33,3 +33,14 @@ a:focus, button:focus, input:focus, .irs:focus-within { outline: 3px solid #FCBA
 /* Employer review: glossary */
 .glossary dt { font-weight: 700; color: #003366; font-size: 0.85rem; margin-top: 0.3rem; }
 .glossary dd { font-size: 0.82rem; margin: 0 0 0.2rem 0; }
+
+/* External feedback: titles wrap instead of being cut off, on any browser/font */
+.card-header, .card-header .chart-title, .chart-title {
+  white-space: normal; overflow: visible; text-overflow: clip; height: auto;
+  overflow-wrap: break-word;
+}
+
+/* Geography ranking table: tighter cells so all six columns fit */
+table.rank-table th, table.rank-table td { padding: 4px 6px !important; }
+/* Data tab: long headers wrap instead of overflowing */
+.dataTables_wrapper th { white-space: normal; }

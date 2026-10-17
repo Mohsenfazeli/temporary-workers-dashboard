@@ -135,9 +135,9 @@ test_that("takeaways and titles are plain sentences with thousands separators", 
   expect_length(tk, 5)
   expect_match(tk[1], "^[0-9]{1,3}(,[0-9]{3})+ TFWP and IMP work permits took effect")
   expect_match(trend_title(filter_selection(d, "2015-01-01", latest), "Canada", "Both"),
-               "the last 12 months were [0-9]+% (above|below) the first 12 months selected$")
+               "the last 12 months were [0-9]+\\.[0-9]% (above|below) the first 12 months selected$")
   expect_match(trend_title(filter_selection(d, "2026-01-01", latest), "Canada", "Both"),
-               "Jul 2026 was ([0-9]+% (above|below)|about the same as) Jan 2026$")
+               "Jul 2026 was ([0-9]+\\.[0-9]% (above|below)|about the same as) Jan 2026$")
 })
 
 test_that("takeaways tell a story: peak and change since, year to date, mix, where", {
@@ -199,4 +199,92 @@ test_that("fmt_share shows tiny shares as '<1%' rather than '0%'", {
   expect_equal(fmt_share(c(0.001, 0.004, 0.006, 0.5), 0), c("<1%", "<1%", "1%", "50%"))
   expect_equal(fmt_share(0, 0), "0%")
   expect_equal(fmt_share(NA), "n/a")
+})
+
+test_that("date helpers are Windows-safe and language-independent", {
+  t <- as.POSIXct("2026-10-16 23:50:00", tz = "UTC")          # 4:50 PM in Vancouver
+  expect_equal(fmt_datetime(t), "October 16, 2026, 4:50 PM PT")
+  expect_equal(fmt_date(t), "October 16, 2026")
+  expect_equal(fmt_date(as.Date("2026-03-01")), "March 1, 2026")   # no leading zero
+  expect_equal(fmt_datetime(as.POSIXct("2026-01-05 08:05:00", tz = "UTC")),
+               "January 5, 2026, 12:05 AM PT")                    # midnight hour = 12 AM
+  expect_equal(fmt_datetime(as.POSIXct("2026-07-01 19:00:00", tz = "UTC")),
+               "July 1, 2026, 12:00 PM PT")                       # noon = 12 PM (PDT)
+  expect_equal(fmt_month(as.Date("2026-07-01")), "July 2026")
+  expect_equal(fmt_month_short(as.Date(c("2015-01-01", "2026-12-01"))), c("Jan 2015", "Dec 2026"))
+})
+
+test_that("no R file uses non-portable date format codes (Windows prints them literally)", {
+  files <- c(list.files(file.path(PROJECT, "R"), "\\.R$", full.names = TRUE),
+             file.path(PROJECT, "app.R"),
+             list.files(file.path(PROJECT, "tools"), "\\.R$", full.names = TRUE))
+  # %-d, %-I etc. (Linux/macOS only); %l, %k, %P and %e are not supported on Windows
+  bad <- "%-[A-Za-z]|%[lkPe]"
+  hits <- unlist(lapply(files, function(f) {
+    x <- sub("#.*$", "", readLines(f, warn = FALSE, encoding = "UTF-8"))   # ignore comments
+    i <- grep(bad, x)
+    if (length(i)) paste0(basename(f), ":", i, ": ", trimws(x[i]))
+  }))
+  expect_identical(hits, NULL, info = paste(hits, collapse = "\n"))
+})
+
+test_that("trend title: same precision as the change card, and the annual view compares calendar years", {
+  sel <- filter_selection(d, "2015-01-01", latest)
+  pc <- kpi_period_change(sel)
+  # Monthly title uses the card's number with the card's precision (1 decimal)
+  expect_match(trend_title(sel, "Canada", "Both", "Monthly", latest),
+               sub("^\\+", "", fmt_pct(pc$change)), fixed = TRUE)
+  # Annual: last full year vs first full year, computed independently
+  ann <- tapply(d$value[d$geography == "Canada"], d$year[d$geography == "Canada"], sum)
+  full <- ann[names(ann) < format(latest, "%Y")]
+  ch <- unname(full[length(full)] / full[1] - 1)
+  expect_equal(trend_title(sel, "Canada", "Both", "Annual", latest),
+               sprintf("TFWP and IMP permits in Canada: %s was %s above %s (%s YTD (Jan\u2013%s) shown separately)",
+                       names(full)[length(full)], sub("^\\+", "", fmt_pct(ch)), names(full)[1],
+                       format(latest, "%Y"), month.abb[as.integer(format(latest, "%m"))]))
+  # Fewer than two full years in the Annual view: falls back to the month rule
+  expect_match(trend_title(filter_selection(d, "2026-01-01", latest), "Canada", "Both", "Annual", latest),
+               "Jul 2026 was")
+})
+
+test_that("takeaways say 'so far' only for a true year to date", {
+  h <- make_takeaways(d, "2015-01-01", "2025-07-01", "Canada", "Both")      # historical end
+  expect_true(any(grepl("^In the selected months of 2025 \\(Jan\u2013Jul\\)", h)))
+  expect_false(any(grepl("so far", h)))
+  m <- make_takeaways(d, "2026-03-01", latest, "Canada", "Both")            # not from January
+  expect_true(any(grepl("^In the selected months of 2026 \\(Mar\u2013", m)))
+  # The figure is the selected months vs the same months a year earlier
+  cur <- sum(d$value[d$geography == "Canada" & d$month >= as.Date("2025-01-01") & d$month <= as.Date("2025-07-01")])
+  expect_true(any(grepl(paste0(fmt_n(cur), " permits took effect"), h, fixed = TRUE)))
+})
+
+test_that("year-over-year title names each program and the combined total, from the data", {
+  cn <- d[d$geography == "Canada", ]
+  full <- dplyr::bind_rows(cn, dplyr::mutate(cn, program = "Total"))
+  y <- yoy_series(full, "2015-01-01", latest, "Annual", by = "program", latest_month = latest)
+  t <- yoy_title_text(y)
+  ytd <- function(pr, yr) {
+    x <- if (pr == "Total") cn else cn[cn$program == pr, ]
+    sum(x$value[x$year == yr & as.integer(format(x$month, "%m")) <= as.integer(format(latest, "%m"))])
+  }
+  yr <- as.integer(format(latest, "%Y"))
+  w <- function(pr) { ch <- ytd(pr, yr) / ytd(pr, yr - 1) - 1
+                      paste(dir_word(ch), sub("^[+-]", "", fmt_pct(ch))) }
+  expect_equal(t, sprintf("%s YTD (Jan\u2013%s): IMP %s, TFWP %s (both programs %s) vs a year earlier",
+                          yr, month.abb[as.integer(format(latest, "%m"))], w("IMP"), w("TFWP"), w("Total")))
+  one <- yoy_series(cn[cn$program == "TFWP", ], "2015-01-01", latest, "Annual", latest_month = latest)
+  expect_no_match(yoy_title_text(one), "both programs")
+})
+
+test_that("chart colours have at least 3:1 contrast with the white background", {
+  lum <- function(h) { v <- grDevices::col2rgb(h)[, 1] / 255
+    v <- ifelse(v <= 0.04045, v / 12.92, ((v + 0.055) / 1.055)^2.4)
+    sum(c(0.2126, 0.7152, 0.0722) * v) }
+  contrast <- vapply(c(CATEGORY_COLOURS, PROGRAM_COLOURS), function(h) 1.05 / (lum(h) + 0.05), numeric(1))
+  expect_true(all(contrast >= 3), info = paste(names(contrast)[contrast < 3], collapse = ", "))
+})
+
+test_that("short axis labels for crowded year axes", {
+  expect_equal(short_year_label(c("2015", "2026 YTD (Jan\u2013Jul)", "2015 (Mar\u2013Dec)")),
+               c("2015", "2026<br>YTD", "2015<br>part"))
 })

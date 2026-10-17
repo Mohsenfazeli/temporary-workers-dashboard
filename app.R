@@ -50,7 +50,7 @@ REF  <- bundle$reference       # IRCC distinct-people reference (may be NULL)
 
 # Slider months, years and latest month all come from the data itself.
 MONTHS        <- month_choices(DATA)
-MONTH_LABELS  <- format(MONTHS, "%b %Y")
+MONTH_LABELS  <- fmt_month_short(MONTHS)   # English labels on any computer
 GEOGRAPHIES   <- c("Canada", PROVINCES_TERRITORIES)
 
 # ---- 2. User interface ----------------------------------------------------------
@@ -60,7 +60,7 @@ status_bar <- htmltools::div(
                        fmt_datetime(META$retrieved_at)),
   " \u00b7 ",
   htmltools::tags$span(htmltools::tags$strong("Latest month available: "),
-                       format(META$latest_month, "%B %Y")),
+                       fmt_month(META$latest_month)),
   " \u00b7 ",
   htmltools::tags$span("Source: IRCC open data"),
   if (identical(META$source, "cache")) htmltools::div(
@@ -91,7 +91,7 @@ sidebar_controls <- bslib::sidebar(
     htmltools::tags$p(htmltools::tags$strong("IMP"), ": International Mobility Program. No LMIA needed, e.g. graduates, spouses, working holiday, trade agreements. IRCC's IMP table excludes people here mainly for other reasons (e.g. asylum claimants)."),
     htmltools::tags$p(paste0("Figures count work permits that took effect. ",
                       format(META$latest_month, "%Y"), " is year-to-date to ",
-                      format(META$latest_month, "%B"), ".")))
+                      month.name[as.integer(format(META$latest_month, "%m"))], ".")))
 )
 
 ui <- bslib::page_navbar(

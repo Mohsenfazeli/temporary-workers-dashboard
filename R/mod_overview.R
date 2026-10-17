@@ -104,7 +104,8 @@ overview_server <- function(id, sel, data, meta) {
 
     # ---- Headline chart: stacked by program ----
     output$headline_title <- shiny::renderText({
-      s <- sel(); trend_title(sel_df(), s$geography, s$program_choice)
+      s <- sel(); trend_title(sel_df(), s$geography, s$program_choice, s$resolution,
+                              meta$latest_month)   # basis matches the plotted view
     })
     output$headline_plot <- plotly::renderPlotly({
       s <- sel()

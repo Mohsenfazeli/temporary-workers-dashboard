@@ -24,20 +24,26 @@ PROGRAM_COLOURS <- c(TFWP = "#0072B2",   # blue
 
 # Category colours (TFWP and IMP each use distinct Okabe-Ito hues; the
 # "Unknown" category is neutral grey so it does not draw the eye).
+# Category colours: Okabe-Ito hues darkened so every colour has at least
+# 3:1 contrast against the white background (WCAG 1.4.11; the lightest is
+# 3.9:1), with lightness varied so neighbouring categories stay distinct for
+# readers with red-green colour blindness (checked by simulation: the
+# closest pair under deuteranopia is more distinct than with the original
+# Okabe-Ito colours). The original yellow (#F0E442) was only 1.3:1.
 CATEGORY_COLOURS <- c(
-  "Seasonal Agricultural Worker Program"        = "#009E73",
-  "Other agricultural workers"                  = "#56B4E9",
-  "Caregivers"                                  = "#CC79A7",
-  "Other TFWP workers with an LMIA"             = "#0072B2",
-  "Other TFWP"                                  = "#BBBBBB",
-  "Post-graduation work permits"                = "#E69F00",
-  "Spouses and family members"                  = "#56B4E9",
-  "International Experience Canada"             = "#009E73",
-  "Significant benefit and PR-bridging permits" = "#0072B2",
-  "Trade and other agreements"                  = "#CC79A7",
-  "Other Canadian interests"                    = "#D55E00",
-  "Vulnerable workers"                          = "#F0E442",
-  "Unknown or other IMP"                        = "#A0A0A0"
+  "Seasonal Agricultural Worker Program"        = "#00845F",  # green
+  "Other agricultural workers"                  = "#2F80C0",  # mid blue
+  "Caregivers"                                  = "#C0559A",  # pink
+  "Other TFWP workers with an LMIA"             = "#0B3D6B",  # navy
+  "Other TFWP"                                  = "#6B6B6B",  # grey
+  "Post-graduation work permits"                = "#C46A00",  # dark orange
+  "Spouses and family members"                  = "#2F80C0",  # mid blue
+  "International Experience Canada"             = "#00845F",  # green
+  "Significant benefit and PR-bridging permits" = "#0B3D6B",  # navy
+  "Trade and other agreements"                  = "#C0559A",  # pink
+  "Other Canadian interests"                    = "#8A2B0E",  # brick red
+  "Vulnerable workers"                          = "#6A5ACD",  # violet
+  "Unknown or other IMP"                        = "#6B6B6B"   # grey
 )
 
 GOV_BLUE <- "#003366"   # BC Government primary blue
@@ -111,7 +117,7 @@ source_line <- function(meta, extra = NULL, reference = FALSE) {
     htmltools::tags$a(href = meta$urls[["IMP"]], target = "_blank", "IMP"),
     # paste0() keeps the date and the full stop together (no stray space)
     paste0(" work permit holders by province/territory, program and month the permit took effect; retrieved ",
-           format(meta$retrieved_at, "%B %-d, %Y"), ". "),
+           fmt_date(meta$retrieved_at), ". "),   # Windows-safe helper (R/calc.R)
     if (reference) htmltools::tagList(
       "Reference: IRCC Excel tables, ",
       htmltools::tags$a(href = meta$reference_urls[["TFWP"]], target = "_blank", "TFWP"),
@@ -144,6 +150,9 @@ chart_card <- function(ns, id, height = "380px", footer = NULL, full_screen = TR
 # `short` is drawn on the chart; `label` is the full note under the chart.
 KEY_EVENTS <- data.frame(
   date  = as.Date(c("2020-03-01", "2024-03-01", "2024-09-01")),
+  # Very short names, used to build one label when two events share a year
+  # in the annual view (e.g. "2024: temp. resident target & TFWP limits")
+  tiny = c("COVID-19 travel limits", "temp. resident target", "TFWP limits"),
   short = c("COVID-19 travel limits (Mar 2020)", "Temporary resident target (Mar 2024)",
             "Low-wage TFWP limits (Sep 2024)"),
   label = c("March 2020: federal COVID-19 travel restrictions on foreign nationals take effect (March 18)",

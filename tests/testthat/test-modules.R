@@ -169,3 +169,19 @@ test_that("event lines on the trend chart carry their sources", {
   for (u in KEY_EVENTS$url) expect_match(out$trend_source, u, fixed = TRUE)
   expect_no_match(out$trend_source, "\\(\\s+<a|</a>\\s+\\)")    # no stray spaces around links
 })
+
+test_that("external feedback: YoY shows both programs, merged event label, table headers, card precision", {
+  tr <- render_all("trends", make_sel("Canada", "Both", "Annual"))
+  expect_match(tr$yoy_plot, "Both programs", fixed = TRUE)
+  expect_match(tr$yoy_title, "both programs (up|down)")
+  expect_match(tr$trend_plot, "2024: temp. resident target & TFWP limits", fixed = TRUE)
+  tf <- render_all("trends", make_sel("Canada", "TFWP", "Annual"))
+  expect_no_match(tf$yoy_plot, "Both programs", fixed = TRUE)
+  geo <- render_all("geography", make_sel("Canada", "Both", "Annual"))
+  expect_match(geo$rank_table, "Province / territory", fixed = TRUE)
+  expect_match(geo$rank_table, "Note*", fixed = TRUE)
+  expect_no_match(geo$rank_table, "<caption", fixed = TRUE)          # no duplicate Growth note
+  ov <- render_all("overview", make_sel("Canada", "Both", "Monthly"))
+  num <- sub("^\\+", "", ov$kpi_change)                              # e.g. "264.7%"
+  expect_match(ov$headline_title, num, fixed = TRUE)                  # same number, same precision
+})

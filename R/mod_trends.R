@@ -20,7 +20,7 @@ trends_ui <- function(id) {
                    "Show IRCC's own annual count of distinct people (supplementary reference; not one of the two assignment data files)",
                    value = FALSE, width = "100%"),
                  shiny::uiOutput(ns("reference_note")))),
-    chart_card(ns, "yoy", height = "320px")
+    chart_card(ns, "yoy", height = "360px")
   )
 }
 
@@ -41,8 +41,10 @@ trends_server <- function(id, sel, data, meta, reference) {
 
     output$trend_title <- shiny::renderText({
       s <- sel()
-      paste(trend_title(sel_df(), s$geography, s$program_choice),
-            if (s$resolution == "Annual") "(by year)" else "(by month)")
+      paste(trend_title(sel_df(), s$geography, s$program_choice, s$resolution,
+                        meta$latest_month),
+            # The annual title already names the years compared
+            if (s$resolution == "Annual") "" else "(by month)") |> trimws()
     })
 
     # Is the chart narrow (under 600 px, e.g. a phone)? A reactiveVal only
@@ -136,7 +138,8 @@ trends_server <- function(id, sel, data, meta, reference) {
           ev$year <- as.integer(format(ev$date, "%Y"))
           ev <- do.call(rbind, lapply(split(ev, ev$year), function(e) data.frame(
             date = e$date[1], year = e$year[1],
-            short = if (nrow(e) > 1) paste(e$year[1], "federal measures") else e$short[1])))
+            short = if (nrow(e) > 1) paste0(e$year[1], ": ", paste(e$tiny, collapse = " & "))
+                    else e$short[1])))
         }
         xs <- if (s$resolution == "Monthly") ev$date else match(ev$year, yrs_shown) - 1
         p <- p |> plotly::layout(
@@ -185,41 +188,41 @@ trends_server <- function(id, sel, data, meta, reference) {
     yoy <- shiny::reactive({
       s <- sel()
       full <- data |> dplyr::filter(geography == s$geography, program %in% s$programs)
+      # With both programs, add their combined total as a third series
+      # ("Total"), consistent with the trend chart above.
+      if (length(s$programs) == 2) full <- dplyr::bind_rows(full, dplyr::mutate(full, program = "Total"))
       yoy_series(full, s$start, s$end, s$resolution, by = "program",
                  latest_month = meta$latest_month)
     })
     output$yoy_title <- shiny::renderText({
-      s <- sel(); y <- yoy()
-      tot <- y |> dplyr::group_by(period, label) |>
-        dplyr::summarise(v = sum(value), pv = sum(prev_value), .groups = "drop") |>
-        dplyr::filter(!is.na(pv))
-      if (nrow(tot) == 0) return("Year-over-year change (not available for this period)")
-      last <- tot[nrow(tot), ]
-      ch <- pct_change(last$v, last$pv)
-      sprintf("Year-over-year change: %s %s %s compared with a year earlier",
-              last$label, dir_word(ch), sub("^[+-]", "", fmt_pct(ch)))
+      yoy_title_text(yoy())          # names each program (R/calc.R, tested)
     })
     output$yoy_plot <- plotly::renderPlotly({
       s <- sel(); y <- yoy()
       y <- y[!is.na(y$yoy), ]
       if (nrow(y) == 0) return(empty_plot("Year-over-year change needs data from a year earlier"))
       y <- y[order(y$period), ]
+      y$program <- factor(ifelse(y$program == "Total", "Both programs", y$program),
+                          levels = c("TFWP", "IMP", "Both programs"))
+      y$program <- droplevels(y$program)
       y$hover <- sprintf("%s %s: %s (%s vs %s)", y$program, y$label, fmt_pct(y$yoy),
                          fmt_n(y$value), fmt_n(y$prev_value))
+      yoy_cols <- c(TFWP = PROGRAM_COLOURS[["TFWP"]], IMP = PROGRAM_COLOURS[["IMP"]],
+                    `Both programs` = PROGRAM_COLOURS[["Total"]])[levels(y$program)]
       if (s$resolution == "Monthly") {
         p <- plotly::plot_ly(y, x = ~period, y = ~yoy, color = ~program,
-                             colors = PROGRAM_COLOURS[c("TFWP", "IMP")],
+                             colors = yoy_cols,
                              type = "scatter", mode = "lines", text = ~hover, hoverinfo = "text")
-        p <- style_plot(p, "Month", "Change vs same month a year earlier (%)", y_format = ".0%") |>
+        p <- style_plot(p, "Month", "Change vs a year earlier", y_format = ".0%") |>
           plotly::layout(xaxis = list(tickformat = "%Y", dtick = "M12"),
                          yaxis = list(rangemode = "normal"))
       } else {
         y$label <- factor(y$label, levels = unique(y$label))
         p <- plotly::plot_ly(y, x = ~label, y = ~yoy, color = ~program,
-                             colors = PROGRAM_COLOURS[c("TFWP", "IMP")], type = "bar",
+                             colors = yoy_cols, type = "bar",
                              text = ~hover, hoverinfo = "text", textposition = "none")
         p <- style_plot(p, "Year the permit took effect",
-                        "Change vs a year earlier (%)", y_format = ".0%", x_type = "category") |>
+                        "Change vs a year earlier", y_format = ".0%", x_type = "category") |>
           plotly::layout(barmode = "group", yaxis = list(rangemode = "normal"))
       }
       p

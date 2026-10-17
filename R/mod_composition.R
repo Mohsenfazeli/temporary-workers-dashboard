@@ -66,6 +66,9 @@ composition_server <- function(id, sel, data, meta) {
                         hovermode = "closest") |>
           plotly::layout(xaxis = list(tickformat = "%Y", dtick = "M12"))
       } else {
+        # Short axis labels ("2026 YTD" on two lines) so they fit without
+        # rotating; the hover text keeps the full label with the months.
+        df$label <- short_year_label(df$label)
         df$label <- factor(df$label, levels = unique(df$label[order(df$period)]))
         p <- plotly::plot_ly(df, x = ~label, y = ~y, color = ~category, colors = cols,
                              type = "bar", text = ~hover, hoverinfo = "text", textposition = "none")
@@ -74,8 +77,9 @@ composition_server <- function(id, sel, data, meta) {
           plotly::layout(barmode = "stack")
       }
       p |> plotly::layout(yaxis = if (as_number) list(rangemode = "tozero") else list(range = c(0, 1)),
-                          xaxis = list(tickangle = -45),
-                          legend = list(orientation = "h", y = -0.3, x = 0, yanchor = "top",
+                          xaxis = list(tickangle = 0),
+                          # Legend below the chart, clear of the (unrotated) axis labels
+                          legend = list(orientation = "h", y = -0.14, x = 0, yanchor = "top",
                                         font = list(size = 11), traceorder = "reversed"),
                           margin = list(b = 40))
     }

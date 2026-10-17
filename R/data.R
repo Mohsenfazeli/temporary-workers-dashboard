@@ -249,8 +249,11 @@ parse_ircc_file <- function(bytes, program) {
   if (encoding == "Latin-1") text <- iconv(text, from = "latin1", to = "UTF-8")
   Encoding(text) <- "UTF-8"
 
-  # 4c. Split into lines (the files use Windows CRLF line endings).
-  lines <- strsplit(text, "\r?\n")[[1]]
+  # 4c. Split into lines (the files use Windows CRLF line endings). A fixed
+  #     "\n" split plus removing a trailing "\r" is much faster than a regex.
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1]]
+  has_cr <- endsWith(lines, "\r")
+  lines[has_cr] <- substr(lines[has_cr], 1L, nchar(lines[has_cr]) - 1L)
 
   # 4d. Header row = first line containing EN_YEAR (allows title rows above).
   header_at <- grep("EN_YEAR", lines, fixed = TRUE)[1]
@@ -268,11 +271,26 @@ parse_ircc_file <- function(bytes, program) {
   is_data  <- grepl("^\"?\\d{4}\"?[\t,]", body)
   footnotes <- trimws(body[!is_data & nzchar(trimws(body))])
 
-  df <- readr::read_delim(
-    I(paste(c(lines[header_at], body[is_data]), collapse = "\n")),
-    delim = delim, col_types = readr::cols(.default = "c"),
-    na = character(), trim_ws = TRUE, progress = FALSE
-  )
+  # Read the table with readr (all columns as text; validated below).
+  # - Clean file (header on line 1, every other line is data, UTF-8): readr
+  #   reads the downloaded bytes directly, which is the fastest path.
+  # - Otherwise: only the header and data lines are written, byte for byte as
+  #   UTF-8, to a temporary file that readr then reads. (Writing raw bytes,
+  #   not writeLines(), avoids any re-encoding on Windows.)
+  read_opts <- function(src) readr::read_delim(
+    src, delim = delim, col_types = readr::cols(.default = "c"),
+    na = character(), trim_ws = TRUE, progress = FALSE,
+    locale = readr::locale(encoding = "UTF-8"))
+  clean_file <- header_at == 1 && all(is_data | !nzchar(body)) && encoding == "UTF-8"
+  if (clean_file) {
+    df <- read_opts(bytes)
+  } else {
+    tmp <- tempfile(fileext = ".txt")
+    on.exit(unlink(tmp), add = TRUE)
+    writeBin(charToRaw(enc2utf8(paste0(paste(c(lines[header_at], body[is_data]),
+                                             collapse = "\n"), "\n"))), tmp)
+    df <- read_opts(tmp)
+  }
 
   # 4g. Validate the layout: every expected column must be present.
   missing_cols <- setdiff(EXPECTED_COLUMNS, names(df))
@@ -577,7 +595,7 @@ load_data <- function(sources = IRCC_URLS,
   cached$meta$problem_type <- if (layout_problem) "layout" else "download"
   cached$meta$cache_note <- sprintf(
     "Showing the saved copy of the data retrieved %s.",
-    format(cached$meta$retrieved_at, "%B %-d, %Y, %-I:%M %p PT"))
+    fmt_datetime(cached$meta$retrieved_at))   # Windows-safe helper (R/calc.R)
   warning(problem, call. = FALSE)       # also visible in the R console/logs
   cached
 }

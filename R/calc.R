@@ -43,14 +43,38 @@ fmt_share <- function(x, digits = 1) {
 }
 
 # Month label, e.g. as.Date("2026-07-01") -> "July 2026".
-fmt_month <- function(d) format(as.Date(d), "%B %Y")
-fmt_month_short <- function(d) format(as.Date(d), "%b %Y")
+# Dates are built from R's built-in English month.name / month.abb and plain
+# numbers, NOT from format codes like "%B", "%p" or "%-d": "%-d"/"%-I" only
+# work on Linux/macOS (Windows prints "-d"), and "%B"/"%b"/"%p" follow the
+# computer's language setting (e.g. French month names on a French Windows).
+fmt_month <- function(d) {
+  d <- as.Date(d)
+  paste(month.name[as.integer(format(d, "%m"))], format(d, "%Y"))
+}
+fmt_month_short <- function(d) {
+  d <- as.Date(d)
+  paste(month.abb[as.integer(format(d, "%m"))], format(d, "%Y"))
+}
+
+# Pacific time for a date-time (BC's time zone; the "PT" labels assume it).
+to_pacific <- function(t) lubridate::with_tz(as.POSIXct(t), "America/Vancouver")
+
+# Date, e.g. "October 16, 2026" (no leading zero). A date-time is first
+# converted to Pacific time so the date matches the "PT" times shown.
+fmt_date <- function(t) {
+  if (inherits(t, "POSIXt")) t <- to_pacific(t)
+  d <- as.Date(format(t, "%Y-%m-%d"))
+  paste0(month.name[as.integer(format(d, "%m"))], " ",
+         as.integer(format(d, "%d")), ", ", format(d, "%Y"))
+}
 
 # Date and time, e.g. "October 16, 2026, 4:50 PM PT" (no leading zeros).
 fmt_datetime <- function(t) {
-  t <- lubridate::with_tz(t, "America/Vancouver")
-  paste0(format(t, "%B "), as.integer(format(t, "%d")), format(t, ", %Y, "),
-         as.integer(format(t, "%I")), format(t, ":%M %p"), " PT")
+  t <- to_pacific(t)
+  h24 <- as.integer(format(t, "%H"))
+  h12 <- ifelse(h24 %% 12 == 0, 12L, h24 %% 12)
+  paste0(fmt_date(t), ", ", h12, ":", format(t, "%M"), " ",
+         ifelse(h24 < 12, "AM", "PM"), " PT")
 }
 
 # Words for direction of change, e.g. +0.05 -> "up", -0.05 -> "down".
@@ -97,6 +121,15 @@ filter_selection <- function(data, start, end, geography = "Canada",
 # the data (2026) is always labelled year-to-date (YTD), e.g.
 # "2026 YTD (Jan-Jul)", and a year cut by the slider is labelled partial,
 # e.g. "2019 (Mar-Dec)". This stops a part-year being read as a full year.
+#' Short axis version of a year label, for crowded category axes:
+#' "2026 YTD (Jan\u2013Jul)" -> "2026<br>YTD"; full years are unchanged; other
+#' part-years ("2015 (Mar\u2013Dec)") -> "2015<br>part".
+short_year_label <- function(label) {
+  label <- as.character(label)
+  out <- sub("^(\\d{4}) YTD.*$", "\\1<br>YTD", label)
+  sub("^(\\d{4}) \\(.*\\)$", "\\1<br>part", out)
+}
+
 year_label <- function(year, first_m, last_m, latest_month) {
   n_months  <- last_m - first_m + 1
   months_tx <- ifelse(first_m == last_m, month.abb[first_m],
@@ -411,8 +444,9 @@ make_takeaways <- function(data, start, end, geography, program_choice) {
     }
   }
 
-  # 3. Most recent: year-to-date vs the same months a year earlier (if the
-  #    range ends part-way through a year), otherwise the last month vs a year earlier
+  # 3. Most recent: the selected months of the last year vs the same months a
+  #    year earlier (if the range ends part-way through a year; called "so far"
+  #    only for a true year to date), otherwise the last month vs a year earlier
   end_year <- as.integer(format(end, "%Y"))
   ytd_months <- sort(unique(sel$month[sel$year == end_year]))
   prev_months <- ytd_months %m-% months(12)
@@ -420,10 +454,16 @@ make_takeaways <- function(data, start, end, geography, program_choice) {
     cur <- sum(sel$value[sel$year == end_year])
     prev <- sum(filter_selection(data, min(prev_months), max(prev_months), geography, programs)$value)
     ch <- pct_change(cur, prev)
-    out <- c(out, sprintf("In %s so far (%s\u2013%s), %s permits took effect, %s %s on the same months of %s.",
-                          end_year, month.abb[as.integer(format(min(ytd_months), "%m"))],
-                          month.abb[as.integer(format(max(ytd_months), "%m"))], fmt_n(cur),
-                          dir_word(ch), sub("^[+-]", "", fmt_pct(ch)), end_year - 1))
+    months_tx <- sprintf("%s\u2013%s", month.abb[as.integer(format(min(ytd_months), "%m"))],
+                         month.abb[as.integer(format(max(ytd_months), "%m"))])
+    # "So far" only when the range runs from January to the latest month IRCC
+    # has published (a true year to date); otherwise name the selected months.
+    is_ytd <- end == max(data$month) && format(min(ytd_months), "%m") == "01"
+    lead <- if (is_ytd) sprintf("In %s so far (%s)", end_year, months_tx)
+            else sprintf("In the selected months of %s (%s)", end_year, months_tx)
+    out <- c(out, sprintf("%s, %s permits took effect, %s %s on the same months of %s.",
+                          lead, fmt_n(cur), dir_word(ch), sub("^[+-]", "", fmt_pct(ch)),
+                          end_year - 1))
   } else {
     lt <- kpi_latest(data, end, geography, programs)
     if (!is.na(lt$change)) {
@@ -463,22 +503,64 @@ make_takeaways <- function(data, start, end, geography, program_choice) {
 }
 
 # ---- 12. Point-stating chart titles -----------------------------------------
+#' Title for the year-over-year chart, naming every plotted series for the
+#' latest period, e.g. "2026 YTD (Jan-Jul): IMP up 63.3%, TFWP down 4.8% (both
+#' programs up 45.8%) vs a year earlier". `y` is yoy_series() output with a
+#' `program` column ("TFWP", "IMP" and, with both programs, "Total").
+yoy_title_text <- function(y) {
+  y <- y[!is.na(y$yoy), ]
+  if (nrow(y) == 0) return("Year-over-year change (not available for this period)")
+  last <- y[y$period == max(y$period), ]
+  part <- function(pr) {
+    r <- last[last$program == pr, ]
+    if (nrow(r) == 0) return(NULL)
+    paste(dir_word(r$yoy), sub("^[+-]", "", fmt_pct(r$yoy)))
+  }
+  progs <- intersect(c("IMP", "TFWP"), last$program)
+  each <- paste(vapply(progs, function(pr) paste(pr, part(pr)), character(1)), collapse = ", ")
+  tot <- if ("Total" %in% last$program) sprintf(" (both programs %s)", part("Total")) else ""
+  sprintf("%s: %s%s vs a year earlier", last$label[1], each, tot)
+}
+
+
 #' Headline for the trend chart, e.g. "Permits that took effect rose 25%
 #' between the first and last 12 months of the period".
-trend_title <- function(df, geography, program_choice) {
-  pc <- kpi_period_change(df)
+trend_title <- function(df, geography, program_choice, resolution = "Monthly",
+                        latest_month = max(df$month)) {
   what <- sprintf("%s permits in %s", program_label(program_choice), geography)
+  # "264.7% above", "12.0% below" or "about the same as" (within +/-2%).
+  # One decimal, the same precision as the change card on the Overview.
+  rel_text <- function(ch) {
+    size <- sub("^[+-]", "", fmt_pct(ch, 1))
+    if (ch >= 0.02) paste(size, "above") else if (ch <= -0.02) paste(size, "below")
+    else "about the same as"
+  }
+  # Annual view: compare calendar years that are visible on the chart, i.e.
+  # the last full year with the first full year (part-years are noted).
+  if (resolution == "Annual") {
+    ann <- summarise_series(df, "Annual", by = character(0), latest_month = latest_month)
+    full <- ann[!ann$partial, ]
+    if (nrow(full) >= 2) {
+      ch <- pct_change(full$value[nrow(full)], full$value[1])
+      if (!is.na(ch)) {
+        note <- if (any(ann$partial)) sprintf(" (%s shown separately)",
+                                              paste(ann$label[ann$partial], collapse = ", ")) else ""
+        return(sprintf("%s: %s was %s %s%s", what, full$label[nrow(full)], rel_text(ch),
+                       full$label[1], note))
+      }
+    }
+  }
+  # Monthly view (or fewer than two full years): the rule used by the
+  # change card (last 12 vs first 12 months, or last vs first month).
+  pc <- kpi_period_change(df)
   if (is.na(pc$change)) {
     return(sprintf("%s work permits that took effect in %s",
                    program_label(program_choice), geography))
   }
-  # "265% above", "12% below" or "about the same as" (within +/-2%)
-  size <- sub("^[+-]", "", fmt_pct(pc$change, 0))
-  rel <- if (pc$change >= 0.02) paste(size, "above") else
-         if (pc$change <= -0.02) paste(size, "below") else "about the same as"
   if (pc$method == "12m") {
-    sprintf("%s: the last 12 months were %s the first 12 months selected", what, rel)
+    sprintf("%s: the last 12 months were %s the first 12 months selected", what, rel_text(pc$change))
   } else {
-    sprintf("%s: %s was %s %s", what, sub(" vs .*", "", pc$label), rel, sub(".* vs ", "", pc$label))
+    sprintf("%s: %s was %s %s", what, sub(" vs .*", "", pc$label), rel_text(pc$change),
+            sub(".* vs ", "", pc$label))
   }
 }

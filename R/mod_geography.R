@@ -88,32 +88,30 @@ geography_server <- function(id, sel, data, meta) {
 
     output$rank_table <- DT::renderDT({
       r <- rank(); s <- sel()
-      tbl <- data.frame(Rank = r$rank, `Province/territory` = r$geography,
+      # Short headers so all six columns fit in the card at 1366 px; the
+      # source line under the table explains Share, Growth and Note.
+      tbl <- data.frame(`#` = r$rank, `Province / territory` = r$geography,
                         # Share as text so tiny shares read "<0.1%" rather than "0.0%"
-                        Permits = r$value, `Share of Canada` = fmt_share(r$share, 1),
+                        Permits = r$value, Share = fmt_share(r$share, 1),
                         Growth = r$growth,
                         # Marker where suppressed small values could hide over 10% more
-                        `Small numbers*` = ifelse(undercount_flag(r$value, r$masked_cells),
-                                                  "Yes", ""), check.names = FALSE)
+                        `Note*` = ifelse(undercount_flag(r$value, r$masked_cells),
+                                         "Small\u00a0n", ""), check.names = FALSE)   # non-breaking space: one line
       DT::datatable(tbl, rownames = FALSE, selection = "none",
-                    class = "compact stripe",
-                    # scrollX keeps every column reachable in a narrow window
+                    class = "compact stripe rank-table",
+                    # scrollX keeps every column reachable on a phone
                     options = list(dom = "t", pageLength = 13, ordering = TRUE,
-                                   scrollX = TRUE, autoWidth = FALSE),
-                    caption = htmltools::tags$caption(style = "caption-side: bottom; font-size: 0.85em;",
-                      kpi_period_change(filter_selection(data, s$start, s$end, "Canada", s$programs))$text |>
-                        (\(x) paste0("Growth = ", x,
-                          ""))())) |>
+                                   scrollX = TRUE, autoWidth = FALSE)) |>
         DT::formatRound("Permits", digits = 0, mark = ",") |>
         DT::formatPercentage("Growth", digits = 1) |>
-        DT::formatStyle("Province/territory", target = "row",
+        DT::formatStyle("Province / territory", target = "row",
                         backgroundColor = DT::styleEqual(s$geography, "#FFF4D6"))
-    })
+    }, server = FALSE)   # client-side: 13 rows, data sent with the table
     output$table_source <- shiny::renderUI(source_line(meta,
-      # The growth basis is stated here (a DataTables caption is hidden by scrollX)
-      extra = paste0("Growth = ", (\(s) kpi_period_change(filter_selection(
+      # The only explanation of Growth (no duplicate table caption)
+      extra = paste0("Share = share of Canada's permits. Growth = ", (\(s) kpi_period_change(filter_selection(
         data, s$start, s$end, "Canada", s$programs))$text)(sel()), ". ",
-        "*Small numbers = Yes: suppressed values (0\u20135 each, counted as 0) could add more than 10% to that total, so treat its share and growth with care.")))
+        "*Note \"Small n\": suppressed values (0\u20135 each, counted as 0) could add more than 10% to that total, so treat its share and growth with care.")))
 
     # ---- Compare the selected province/territory with Canada ----
     cmp <- shiny::reactive({

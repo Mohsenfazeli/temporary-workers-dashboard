@@ -2,7 +2,7 @@
 
 An interactive dashboard of temporary work permits by province/territory and program (TFWP and IMP), from January 2015 to the latest month IRCC has published.
 
-**Live app:** https://mohsenfazeli.shinyapps.io/temporary-workers-dashboard/
+**Live dashboard:** https://mohsenfazeli.shinyapps.io/temporary-workers-dashboard/ (the first visit can take up to a minute while the server wakes up).
 
 ![Overview tab](docs/overview.png)
 ![Trends tab](docs/trends.png)
@@ -10,10 +10,8 @@ An interactive dashboard of temporary work permits by province/territory and pro
 ## Run it locally
 1. Install R (4.3 or newer; built with 4.5.0) from https://cloud.r-project.org. RStudio is optional.
 2. Clone or download this repository and open R in its folder (in RStudio: open the folder, or `setwd()` to it).
-3. Install the packages, using one of these:
-   - Exact versions: `install.packages("renv"); renv::restore()`
-   - Or skip this step: every script installs any missing packages itself on first run.
-4. Start the app with `shiny::runApp()`. A browser tab opens.
+3. Start the app: `shiny::runApp()` (if the shiny package isn't installed yet, run `install.packages("shiny")` first). A browser tab opens. On first run every script installs any missing packages itself from CRAN as ready-made binaries, so no compiler (e.g. Rtools on Windows) is needed.
+4. Optional, only if you want the exact package versions used to build it: `install.packages("renv"); renv::restore()`. This can take much longer, and on Windows it may need Rtools if an exact version is only available as source code.
 
 The IRCC data download automatically at startup. If the IRCC website can't be reached, or IRCC changes its file layout, the app uses the saved copy in `data/cache.rds` and says so in the header.
 
