@@ -12,3 +12,14 @@ res <- testthat::test_dir("tests/testthat", reporter = testthat::ProgressReporte
 df <- as.data.frame(res)
 cat(sprintf("\nSUMMARY: %d tests, %d passed expectations, %d failed, %d skipped, %d errors\n",
             nrow(df), sum(df$passed), sum(df$failed), sum(df$skipped), sum(df$error)))
+# Optional: save the results table for tools/windows_check.R to read.
+out <- Sys.getenv("TW_TEST_RESULTS", "")
+if (nzchar(out)) saveRDS(df[, c("file", "test", "nb", "passed", "failed", "skipped", "error")], out)
+# Exit with status 1 if any test failed or stopped with an error, so a script
+# calling this file can tell (errors are not "failures" in testthat's counts).
+bad <- df$failed > 0 | df$error
+if (any(bad)) {
+  cat("Tests with failures or errors:\n")
+  cat(sprintf("  - %s: %s\n", df$file[bad], df$test[bad]), sep = "")
+  quit(status = 1)
+}

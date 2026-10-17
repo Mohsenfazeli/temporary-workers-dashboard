@@ -48,6 +48,8 @@ NOT_CRAN=true Rscript tests/testthat.R
 ```
 - The browser tests need Google Chrome or Chromium.
 - The live test reads IRCC directly and skips with a message if IRCC can't be reached.
+- The performance tests time the app starting from the saved copy (`data/cache.rds`; target under 10 s) and filter changes (median under 1 s, none over 2 s). A live start also downloads about 17 MB from IRCC, so it takes longer on a slow connection.
+- `tests/testthat.R` exits with status 1 if any test fails or stops with an error; `Rscript tools/windows_check.R` runs everything and prints ALL CHECKS PASSED only when there are 0 failures and 0 errors.
 
 ## Optional settings (environment variables)
 - `TW_LOCAL_DIR`: read local copies of the four IRCC files instead of the URLs (same code path).

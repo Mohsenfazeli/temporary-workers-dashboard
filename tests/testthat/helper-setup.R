@@ -6,6 +6,11 @@ if (length(missing_packages) > 0) {
   install.packages(missing_packages, repos = "https://cloud.r-project.org")
 }
 
+# Browser tests: give headless Chrome up to 60 s per command (default 10 s).
+# The first page load waits for the app to read its data, which can take
+# longer than 10 s on a slower computer (seen on a Windows PC: about 18 s).
+options(chromote.timeout = 60)
+
 # Project root = two levels above tests/testthat.
 PROJECT <- tryCatch(normalizePath(file.path(testthat::test_path(), "..", "..")),
                     error = function(e) normalizePath(file.path(getwd(), "..", "..")))

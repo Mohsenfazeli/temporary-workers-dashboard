@@ -40,9 +40,30 @@ if (!dir.exists("testdata") || length(list.files("testdata")) < 4) {
 
 # 4. Full test suite (runs in a separate R process, output shown here)
 say("Running the full test suite (about 10-20 minutes) ...")
+# tests/testthat.R saves its results table to this file; we count from it.
+results_file <- tempfile(fileext = ".rds")
+Sys.setenv(TW_TEST_RESULTS = results_file)
 status <- system2(file.path(R.home("bin"), "Rscript"), "tests/testthat.R")
 say("Test suite exit status: %s", status)
-if (!identical(as.integer(status), 0L)) { ok <- FALSE; say("FAIL: test suite (see output above)") }
+if (!file.exists(results_file)) {
+  ok <- FALSE; say("FAIL: the test suite did not finish (no results saved; see output above)")
+} else {
+  df <- readRDS(results_file)
+  n_failed <- sum(df$failed)         # failed expectations
+  n_errors <- sum(df$error)          # tests that stopped with an error
+  say("Tests: %d | passed expectations: %d | failed: %d | errors: %d | skipped: %d",
+      nrow(df), sum(df$passed), n_failed, n_errors, sum(df$skipped))
+  bad <- df$failed > 0 | df$error
+  if (any(bad)) {
+    ok <- FALSE
+    say("FAIL: tests with failures or errors:")
+    for (i in which(bad)) {
+      say("  - %s: %s (%s)", df$file[i], df$test[i],
+          if (df$error[i]) "error" else sprintf("%d failed", df$failed[i]))
+    }
+  }
+}
+if (!identical(as.integer(status), 0L)) { ok <- FALSE; say("FAIL: the test suite exited with status %s", status) }
 
 # 5. Headless app start
 port <- 8765L
@@ -58,7 +79,7 @@ while (as.numeric(difftime(Sys.time(), t0, units = "secs")) < 180 && app$is_aliv
 }
 secs <- round(as.numeric(difftime(Sys.time(), t0, units = "secs")))
 if (is.null(html)) {
-  ok <- FALSE; say("FAIL: the app did not answer within 180 s")
+  ok <- FALSE; say("FAIL: the app did not start, or did not answer within 180 s")
   if (!app$is_alive()) cat(app$read_all_error())
 } else {
   Encoding(html) <- "UTF-8"
@@ -68,4 +89,5 @@ if (is.null(html)) {
   if (grepl("saved copy", html)) say("Note: the app is using the saved copy (IRCC not reachable from here).")
 }
 app$kill()
-say(if (ok) "ALL CHECKS PASSED" else "SOME CHECKS FAILED (see above)")
+# ALL CHECKS PASSED only if every step passed, with 0 failed and 0 errors.
+say(if (ok) "ALL CHECKS PASSED" else "SOME CHECKS FAILED (see the FAIL lines above)")
