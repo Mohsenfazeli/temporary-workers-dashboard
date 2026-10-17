@@ -19,7 +19,7 @@ status_text <- function(app) gsub("\\s+", " ", app$get_text(".status-bar"))
 
 # Move the date-range slider like a user would (through the slider widget).
 set_range <- function(app, from_label, to_label) {
-  labs <- format(month_choices(BUNDLE$data), "%b %Y")
+  labs <- fmt_month_short(month_choices(BUNDLE$data))   # same labels as app.R ("Jan 2015")
   app$run_js(sprintf("$('#range').data('ionRangeSlider').update({from: %d, to: %d});",
                      match(from_label, labs) - 1, match(to_label, labs) - 1))
   app$wait_for_idle(800)

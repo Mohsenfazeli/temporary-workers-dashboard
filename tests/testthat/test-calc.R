@@ -288,3 +288,37 @@ test_that("short axis labels for crowded year axes", {
   expect_equal(short_year_label(c("2015", "2026 YTD (Jan\u2013Jul)", "2015 (Mar\u2013Dec)")),
                c("2015", "2026<br>YTD", "2015<br>part"))
 })
+
+test_that("the Unknown-IMP note uses the selected geography and handles edge cases", {
+  # Expected numbers computed straight from the data for each geography
+  expected <- function(geo) {
+    u <- d[d$geography == geo & d$category == "Unknown or other IMP" &
+             d$year < as.integer(format(latest, "%Y")), ]
+    by_year <- tapply(u$value, u$year, sum)
+    list(peak = max(by_year), peak_year = names(by_year)[which.max(by_year)],
+         early = sum(by_year[as.integer(names(by_year)) <= 2020]))
+  }
+  ca <- unknown_imp_note_text(d, "Canada", latest)
+  bc <- unknown_imp_note_text(d, "British Columbia", latest)
+  e_ca <- expected("Canada"); e_bc <- expected("British Columbia")
+  expect_match(ca, "across Canada", fixed = TRUE)
+  expect_match(bc, "in British Columbia", fixed = TRUE)
+  expect_match(bc, sprintf("a peak of %s in %s", fmt_n(e_bc$peak), e_bc$peak_year), fixed = TRUE)
+  expect_match(bc, sprintf("%s in 2015\u20132020 combined", fmt_n(e_bc$early)), fixed = TRUE)
+  expect_match(ca, sprintf("a peak of %s in %s", fmt_n(e_ca$peak), e_ca$peak_year), fixed = TRUE)
+  expect_true(e_bc$peak < e_ca$peak)                       # BC is not Canada's number
+  expect_no_match(bc, fmt_n(e_ca$peak), fixed = TRUE)
+  expect_match(unknown_imp_note_text(d, NOT_STATED_GEO, latest), "not stated")
+  # Edge cases: never NA, -Inf or "n/a" in the sentence
+  only_partial <- d[d$year == as.integer(format(latest, "%Y")), ]
+  zeros <- d; zeros$value[zeros$category == "Unknown or other IMP"] <- 0
+  for (txt in c(unknown_imp_note_text(only_partial, "Yukon", latest),
+                unknown_imp_note_text(zeros, "Yukon", latest),
+                vapply(c("Canada", PROVINCES_TERRITORIES, NOT_STATED_GEO),
+                       function(g) unknown_imp_note_text(d, g, latest), character(1)))) {
+    expect_no_match(txt, "NA|Inf|n/a")
+  }
+  expect_match(unknown_imp_note_text(only_partial, "Yukon", latest), "no full calendar year")
+  expect_match(unknown_imp_note_text(zeros, "Yukon", latest), "records no IMP permits in Yukon")
+  expect_no_match(unknown_imp_note_text(zeros, "Yukon", latest), "growing")
+})

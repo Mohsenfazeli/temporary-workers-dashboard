@@ -564,3 +564,51 @@ trend_title <- function(df, geography, program_choice, resolution = "Monthly",
             sub(".* vs ", "", pc$label))
   }
 }
+
+# -----------------------------------------------------------------------------
+# Composition tab note on "Unknown International Mobility Program" permits,
+# computed for the geography selected in the sidebar (full calendar years only,
+# so the partial latest year does not look like a drop).
+#   data          the tidy data (one row per month x geography x program x category)
+#   geography     the selected geography, e.g. "British Columbia" or "Canada"
+#   latest_month  the latest month in the data (its year is partial)
+# Returns one sentence. Suppressed IRCC cells ("--", 0 to 5 permits) are
+# counted as 0, as everywhere else in the dashboard, and the note says so.
+# -----------------------------------------------------------------------------
+geo_phrase <- function(geography) {
+  if (geography == "Canada") return("across Canada")
+  if (geography == "Province/territory not stated") return("where the province or territory was not stated")
+  paste("in", geography)
+}
+
+unknown_imp_note_text <- function(data, geography, latest_month) {
+  where <- geo_phrase(geography)
+  # Rows for the "Unknown or other IMP" category in the selected geography
+  u <- data[data$geography == geography & data$category == "Unknown or other IMP", ]
+  latest_year <- as.integer(format(latest_month, "%Y"))
+  u <- u[u$year != latest_year, ]                     # full calendar years only
+  if (nrow(u) == 0) {
+    # No full years in the data: describe the coding issue without numbers
+    return(sprintf("IRCC records some IMP permits as \"Unknown International Mobility Program\" (no full calendar year of data %s to count them). ", where))
+  }
+  by_year <- tapply(u$value, u$year, sum)             # permits per full year
+  masked <- any(u$any_masked)                         # any suppressed cell used?
+  mask_note <- if (masked) " Suppressed IRCC counts (0 to 5) are counted as 0." else ""
+  if (all(by_year == 0)) {
+    return(sprintf("IRCC records no IMP permits %s as \"Unknown International Mobility Program\" in %s\u2013%s.%s ",
+                   where, names(by_year)[1], names(by_year)[length(by_year)], mask_note))
+  }
+  peak <- names(by_year)[which.max(by_year)]          # first year with the most
+  years <- as.integer(names(by_year))
+  early <- by_year[years <= 2020]                     # 2015-2020 (if in the data)
+  early_txt <- if (length(early) > 0) {
+    sprintf("%s in %s\u20132020 combined; ", fmt_n(sum(early)), min(years))
+  } else ""
+  # Say "growing" (and point to the recording change) only when the data show
+  # it: the peak is after 2020 and above the 2015-2020 yearly average.
+  growing <- as.integer(peak) > 2020 && (length(early) == 0 || mean(early) < max(by_year))
+  sprintf("IRCC records %s IMP permits %s as \"Unknown International Mobility Program\" (%sa peak of %s in %s).%s %s",
+          if (growing) "a growing number of" else "some", where, early_txt,
+          fmt_n(max(by_year)), peak, mask_note,
+          if (growing) "Part of the shift in the IMP mix after 2021 reflects how permits were recorded, not only real change." else "")
+}

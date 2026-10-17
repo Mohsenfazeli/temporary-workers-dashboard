@@ -12,7 +12,6 @@ if (length(missing_packages) > 0) {
   install.packages(missing_packages, repos = "https://cloud.r-project.org")
 }
 source("R/calc.R")   # formatting helpers used by data.R (fmt_datetime)
-source("R/calc.R")   # formatting helpers used by data.R (fmt_datetime)
 source("R/data.R")
 suppressWarnings(file.remove("data/cache.rds"))
 

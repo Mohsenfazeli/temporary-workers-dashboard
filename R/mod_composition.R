@@ -140,16 +140,9 @@ composition_server <- function(id, sel, data, meta) {
       if (!"IMP" %in% s$programs) return(NULL)
       htmltools::div(class = "alert alert-info caveat", role = "note",
         htmltools::tags$strong("Reading the IMP mix: "),
-        # The figures in this note are computed from the data (Canada, full years).
-        {
-          u <- data[data$geography == "Canada" & data$category == "Unknown or other IMP", ]
-          by_year <- tapply(u$value, u$year, sum)
-          full <- by_year[names(by_year) != format(meta$latest_month, "%Y")]
-          peak <- names(full)[which.max(full)]
-          sprintf("IRCC records a growing number of IMP permits as \"Unknown International Mobility Program\" (%s in 2015\u20132020 combined; a peak of %s in %s). ",
-                  fmt_n(sum(full[names(full) <= "2020"])), fmt_n(max(full)), peak)
-        },
-        "Part of the shift in the IMP mix after 2021 reflects how permits were recorded, not only real change.")
+        # Figures for the selected geography, full calendar years (see
+        # unknown_imp_note_text() in R/calc.R); updates when the geography changes.
+        unknown_imp_note_text(data, as.character(s$geography), meta$latest_month))
     })
   })
 }

@@ -151,6 +151,33 @@ test_that("the composition mix can be shown as numbers, and the glossary is show
   expect_match(ui, "What the categories mean"); expect_match(ui, "Labour Market Impact Assessment")
 })
 
+test_that("the 'Reading the IMP mix' note follows the selected geography", {
+  note_for <- function(geo, prog = "Both") {
+    sel <- shiny::reactiveVal(make_sel(geo, prog, "Annual"))
+    txt <- NULL
+    shiny::testServer(function(input, output, session) composition_server("x", sel, d, meta), {
+      txt <<- paste(format(output[["x-unknown_note"]]), collapse = "")
+      sel(make_sel("British Columbia", prog, "Annual"))      # change the filter
+      session$flushReact()
+      attr(txt, "after_bc") <<- paste(format(output[["x-unknown_note"]]), collapse = "")
+    })
+    txt
+  }
+  ca <- note_for("Canada"); bc <- attr(ca, "after_bc")
+  expect_match(ca, "across Canada", fixed = TRUE)
+  expect_match(bc, "in British Columbia", fixed = TRUE)
+  expect_false(identical(ca, bc))                             # reacts to the filter
+  # The peak shown is BC's own peak, not Canada's
+  peak_of <- function(geo) {
+    u <- d[d$geography == geo & d$category == "Unknown or other IMP" &
+             d$year < as.integer(format(latest, "%Y")), ]
+    max(tapply(u$value, u$year, sum))
+  }
+  expect_match(bc, paste("a peak of", fmt_n(peak_of("British Columbia"))), fixed = TRUE)
+  expect_no_match(bc, fmt_n(peak_of("Canada")), fixed = TRUE)
+  expect_no_match(note_for("British Columbia", "TFWP"), "Reading the IMP mix")  # no IMP, no note
+})
+
 test_that("About states the data rules, the IMP subset caveat, event sources and a glossary", {
   ab <- NULL
   shiny::testServer(function(input, output, session) about_server("x", d, meta, ref), {
