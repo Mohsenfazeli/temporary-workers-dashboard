@@ -1,6 +1,6 @@
 # =============================================================================
 # tools/build_cache_and_profile.R
-# Builds data/cache.rds from the two IRCC files that were downloaded by hand
+# Builds data/cache.rds (and its verified twin data/baseline.rds) from the two IRCC files that were downloaded by hand
 # (Oct 16, 2026, 4:49-4:50 PM PT) and prints the checks used in
 # data_profile.md. Run from the project folder: Rscript tools/build_cache_and_profile.R
 # (Kept outside R/ so Shiny does not run it automatically at app start.)
@@ -105,3 +105,7 @@ cat("Months compared:", nrow(cmp), "| TFWP >= arrivals every month:",
 print(d$reference$table); cat(substr(d$reference$notes,1,300),"\n")
 cat("Cache written:", file.exists("data/cache.rds"),
     file.info("data/cache.rds")$size, "bytes\n")
+# The same verified data become the baseline that every later live download
+# is checked against (R/data.R, check_against_baseline). Never written by the app.
+file.copy("data/cache.rds", "data/baseline.rds", overwrite = TRUE)
+cat("Baseline written:", file.exists("data/baseline.rds"), "\n")

@@ -5,7 +5,8 @@
 # Run locally with: shiny::runApp()   (the IRCC data download automatically)
 #
 # Structure:
-#   R/data.R        live download, cleaning, validation, cache (load_data)
+#   R/data.R        live download, cleaning, validation against a verified
+#                   baseline copy, cache (load_data)
 #   R/calc.R        all calculations (testable, no Shiny code)
 #   R/theme.R       colours, fonts, chart helpers, source lines
 #   R/mod_*.R       one Shiny module per tab
@@ -42,6 +43,9 @@ if (nzchar(local_dir)) {
 }
 bundle <- load_data(sources = core_sources, reference_sources = ref_sources,
                     cache_path = file.path("data", "cache.rds"),
+                    # verified copy: new downloads must match it for settled
+                    # months, or the app keeps its saved data (see R/data.R)
+                    baseline_path = file.path("data", "baseline.rds"),
                     timeout = as.numeric(Sys.getenv("TW_TIMEOUT", "60")),   # per download (server reachable)
                     tries = as.integer(Sys.getenv("TW_TRIES", "2")))
 DATA <- bundle$data            # tidy table used by every tab

@@ -28,11 +28,13 @@ rsconnect::setAccountInfo(name = account, token = token, secret = secret)
 
 # ---- 3. Deploy only the files the app needs ----------------------------------
 # The IRCC files are NOT uploaded: the app downloads them live at startup and
-# uses data/cache.rds only if the download fails.
+# uses data/cache.rds only if the download fails or does not pass its checks.
+# data/baseline.rds is the verified copy new downloads are checked against.
 app_files <- c("app.R",
                list.files("R", pattern = "\\.R$", full.names = TRUE),
                "www/styles.css",
-               "data/cache.rds")
+               "data/cache.rds",
+               "data/baseline.rds")
 rsconnect::deployApp(appDir = ".", appFiles = app_files,
                      appName = "temporary-workers-dashboard",
                      appTitle = "Temporary Workers in Canada",

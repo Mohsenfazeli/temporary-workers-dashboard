@@ -13,7 +13,7 @@ An interactive dashboard of temporary work permits by province/territory and pro
 3. Start the app: `shiny::runApp()` (if the shiny package isn't installed yet, run `install.packages("shiny")` first). A browser tab opens. On first run every script installs any missing packages itself from CRAN as ready-made binaries, so no compiler (e.g. Rtools on Windows) is needed.
 4. Optional, only if you want the exact package versions used to build it: `install.packages("renv"); renv::restore()`. This can take much longer, and on Windows it may need Rtools if an exact version is only available as source code.
 
-The IRCC data download automatically at startup. If the IRCC website can't be reached, or IRCC changes its file layout, the app uses the saved copy in `data/cache.rds` and says so in the header.
+The IRCC data download automatically at startup. If the IRCC website can't be reached, IRCC changes its file layout, or a download does not match the verified copy (`data/baseline.rds`) for months older than 12 months, the app uses the saved copy in `data/cache.rds` and says so in the header. The cache is only overwritten by a download that passes every check.
 
 ## Data
 Main data, read live at startup (Open Government Licence – Canada):
@@ -33,7 +33,8 @@ How the data are handled:
 - `R/theme.R`: colours (colour-blind safe), chart styling, source lines.
 - `R/mod_*.R`: one module per tab (Overview, Trends, Geography, Composition, Data, About).
 - `www/styles.css`: government-style visual tweaks.
-- `data/cache.rds`: offline fallback (IRCC data as downloaded on October 16, 2026).
+- `data/cache.rds`: offline fallback (IRCC data as downloaded on October 16, 2026; replaced on the server only by a download that passes every check).
+- `data/baseline.rds`: verified copy of the same data, never overwritten. Each new download is compared with it for settled months (at least 12 months before its latest month); if more than 2% of cells or any full-year Canada program total (more than 1%) differ, the download is treated as damaged. Refresh it with `tools/build_cache_and_profile.R` when you redeploy with newer verified files.
 - `data_profile.md`: data profile, checks and assumptions.
 - `tests/`: testthat and shinytest2 tests.
 - `tools/get_testdata.R`: downloads the four IRCC files into `testdata/` for the tests.

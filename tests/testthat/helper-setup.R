@@ -70,3 +70,24 @@ ircc_reachable <- function() {
                   error = function(e) "error")
   !is.character(res)
 }
+
+# The verified baseline copy shipped with the app (never written by tests).
+BASELINE <- file.path(PROJECT, "data", "baseline.rds")
+
+# Fixture: a "damaged" download like the one IRCC served on October 18, 2026:
+# same layout and row count, but about half of the IMP counts are wrong.
+# Every second IMP data row with a number gets a different number.
+make_damaged_dir <- function() {
+  dir <- file.path(tempdir(), paste0("damaged_", as.integer(runif(1, 1, 1e6))))
+  dir.create(dir)
+  file.copy(c(LOCAL_CORE[["TFWP"]], LOCAL_REF), dir)
+  lines <- readLines(LOCAL_CORE[["IMP"]], encoding = "UTF-8")
+  num <- grep("\t[0-9]+\r?$", lines)
+  hit <- num[seq(1, length(num), by = 2)]
+  val <- as.numeric(sub("^.*\t([0-9]+)\r?$", "\\1", lines[hit]))
+  lines[hit] <- paste0(sub("\t[0-9]+\r?$", "\t", lines[hit]), val * 2 + 7)
+  writeLines(lines, file.path(dir, basename(LOCAL_CORE[["IMP"]])), useBytes = TRUE)
+  dir
+}
+damaged_core <- function(dir) c(TFWP = file.path(dir, basename(LOCAL_CORE[["TFWP"]])),
+                                IMP  = file.path(dir, basename(LOCAL_CORE[["IMP"]])))

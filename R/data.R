@@ -15,10 +15,18 @@
 #   6. Builds a "Canada" total as the sum of all provinces, territories and
 #      "Province/territory not stated" (the files have no Canada row).
 #   7. Returns the data plus metadata (when retrieved, latest month, source).
-#   8. Saves data/cache.rds after every successful live read; if the live
-#      read fails OR the file layout has changed, it loads that cache instead
-#      and records a clear warning naming the problem.
-#   9. Also reads IRCC's two Excel tables, used ONLY as a reference for
+#   8. Checks the new data against a fixed, verified copy shipped with the
+#      app (data/baseline.rds, never overwritten). Months that IRCC has had
+#      time to settle (older than 12 months before the copy's latest month)
+#      must match it closely; otherwise the download is treated as damaged.
+#      (A live IRCC download on October 18, 2026 returned an IMP file with the
+#      normal layout and row count but about half its values wrong; only a
+#      check against known-good numbers can catch that.)
+#   9. Saves data/cache.rds only after a read passes every check; if the live
+#      read fails, the layout has changed OR the baseline check fails, it
+#      loads that cache (or, if there is none, the baseline) instead and
+#      records a clear warning naming the problem.
+#  10. Also reads IRCC's two Excel tables, used ONLY as a reference for
 #      Canada's annual count of distinct people (IRCC de-duplicates people
 #      within a year, so these are 1-3% below the sum of the months). If the
 #      Excel read fails, the dashboard still works and hides the reference.
@@ -416,6 +424,57 @@ build_reference <- function(raw_list) {
   out
 }
 
+# ---- 5c. Check new data against the verified baseline copy ------------------
+# A damaged download can keep the right columns and row count but carry wrong
+# numbers, which no layout check can see. So the new table is compared with
+# a verified copy (data/baseline.rds) for "settled" months: months at least
+# `settle_months` older than the baseline's latest month, which IRCC rarely
+# revises. The check stops with "Validation failed" (and the app keeps its
+# saved copy) when:
+#   - the new data start later or end earlier than the baseline;
+#   - more than `max_cell_share` of settled province x program x category x
+#     month cells differ from the baseline by more than 1% (and more than 5
+#     permits, to allow for small IRCC revisions and masking); or
+#   - any settled full-year Canada total by program differs by more than
+#     `max_total_diff`.
+# Returns a short summary (invisibly) when the data pass.
+check_against_baseline <- function(data, baseline, settle_months = 12,
+                                   max_cell_share = 0.02, max_total_diff = 0.01) {
+  base_latest <- max(baseline$month)
+  settled_to  <- base_latest %m-% months(settle_months)
+  if (min(data$month) > min(baseline$month) || max(data$month) < base_latest) {
+    stop(sprintf("Validation failed: the new data cover %s to %s, but the checked copy covers %s to %s.",
+                 format(min(data$month), "%b %Y"), format(max(data$month), "%b %Y"),
+                 format(min(baseline$month), "%b %Y"), format(base_latest, "%b %Y")), call. = FALSE)
+  }
+  key <- c("month", "geography", "program", "category")
+  b <- baseline[baseline$month <= settled_to & baseline$geography != "Canada", c(key, "value")]
+  n <- data[data$month <= settled_to & data$geography != "Canada", c(key, "value")]
+  b$geography <- as.character(b$geography); n$geography <- as.character(n$geography)
+  b$category  <- as.character(b$category);  n$category  <- as.character(n$category)
+  m <- dplyr::left_join(b, n, by = key, suffix = c("_base", "_new"))
+  gap <- abs(dplyr::coalesce(m$value_new, -Inf) - m$value_base)
+  differs <- gap > pmax(5, 0.01 * m$value_base)
+  cell_share <- mean(differs)
+  yr_tot <- function(d) {
+    d <- d[d$geography == "Canada" & d$month <= settled_to, ]
+    full <- names(which(table(lubridate::year(unique(d$month))) == 12))
+    d <- d[as.character(lubridate::year(d$month)) %in% full, ]
+    stats::aggregate(value ~ program + year, data = transform(d, year = lubridate::year(month)), FUN = sum)
+  }
+  t <- merge(yr_tot(baseline), yr_tot(data), by = c("program", "year"), all.x = TRUE,
+             suffixes = c("_base", "_new"))
+  t$rel <- abs(dplyr::coalesce(t$value_new, 0) / t$value_base - 1)
+  worst <- t[which.max(t$rel), ]
+  if (cell_share > max_cell_share || max(t$rel) > max_total_diff) {
+    stop(sprintf(paste("Validation failed: the new IRCC data do not match the checked copy for months",
+                       "up to %s (%.1f%% of cells differ; largest yearly gap %.1f%%, %s %d)."),
+                 format(settled_to, "%b %Y"), 100 * cell_share, 100 * worst$rel,
+                 worst$program, worst$year), call. = FALSE)
+  }
+  invisible(list(settled_to = settled_to, cell_share = cell_share, max_year_gap = max(t$rel)))
+}
+
 # ---- 6. Main function -------------------------------------------------------
 #' Load the TFWP and IMP data (live first, cache as fallback)
 #'
@@ -425,6 +484,8 @@ build_reference <- function(raw_list) {
 #'                    local paths for IRCC's Excel tables (reference only).
 #'                    Use NULL to skip the reference.
 #' @param cache_path  Where to save / read the offline copy.
+#' @param baseline_path Verified copy (never written) used to check new data
+#'                    and as the last fallback. NULL skips the check.
 #' @param timeout     Seconds to wait for the downloads.
 #' @param tries       Download attempts before giving up.
 #' @param source_label Optional text describing where the data came from.
@@ -438,6 +499,7 @@ build_reference <- function(raw_list) {
 load_data <- function(sources = IRCC_URLS,
                       reference_sources = IRCC_REFERENCE_URLS,
                       cache_path = file.path("data", "cache.rds"),
+                      baseline_path = NULL,
                       timeout = 60,
                       tries = 2,
                       source_label = NULL,
@@ -527,6 +589,12 @@ load_data <- function(sources = IRCC_URLS,
              value, cells, masked_cells, any_masked) |>
       arrange(month, geography, program, category)
 
+    # 6h2. Compare with the verified baseline copy (catches damaged files that
+    #      still have the right layout). Stops with "Validation failed".
+    baseline_check <- if (!is.null(baseline_path) && file.exists(baseline_path)) {
+      check_against_baseline(data, readRDS(baseline_path)$data)
+    } else NULL
+
     # 6i. Reference (optional): failure here never stops the dashboard.
     reference <- if (is.null(reference_sources)) {
       list(table = NULL, note = "Reference not requested.")
@@ -561,6 +629,7 @@ load_data <- function(sources = IRCC_URLS,
       unmapped_categories = unique(detail$category[
         detail$category %in% c("Other TFWP", "Unknown or other IMP") &
           detail$level_2 != "Other IMP Participants"]),
+      baseline_check = baseline_check, # NULL when no baseline was given
       warning        = NULL,         # set when the cache is used
       cache_note     = NULL
     )
@@ -576,23 +645,33 @@ load_data <- function(sources = IRCC_URLS,
     return(result)
   }
 
-  # 6l. Failure (download problem OR changed layout): fall back to the cache
-  #     and record a clear warning that names the problem.
+  # 6l. Failure (download problem, changed layout OR failed baseline check):
+  #     fall back to the cache (only ever written after a read that passed
+  #     every check), or to the baseline copy if there is no cache, and
+  #     record a clear warning that names the problem.
   msg <- conditionMessage(result)
   layout_problem <- grepl("Layout changed|Unexpected value|Unrecognised", msg)
+  validation_problem <- grepl("Validation failed", msg)
   problem <- if (layout_problem) {
     paste("IRCC's file layout has changed, so the new file was not used.", msg)
+  } else if (validation_problem) {
+    paste("The new IRCC download did not match the checked copy of earlier months,",
+          "so it was not used.", msg)
   } else {
     paste("The live IRCC download failed.", msg)
   }
-  if (!file.exists(cache_path)) {
+  fallback <- if (file.exists(cache_path)) cache_path else
+    if (!is.null(baseline_path) && file.exists(baseline_path)) baseline_path else NA
+  if (is.na(fallback)) {
     stop(problem, " No saved copy exists at ", cache_path, ".", call. = FALSE)
   }
-  cached <- readRDS(cache_path)
+  cached <- readRDS(fallback)
   cached$meta$source_when_cached <- cached$meta$source
   cached$meta$source  <- "cache"
+  cached$meta$fallback_file <- basename(fallback)
   cached$meta$warning <- problem
-  cached$meta$problem_type <- if (layout_problem) "layout" else "download"
+  cached$meta$problem_type <- if (layout_problem) "layout" else
+    if (validation_problem) "validation" else "download"
   cached$meta$cache_note <- sprintf(
     "Showing the saved copy of the data retrieved %s.",
     fmt_datetime(cached$meta$retrieved_at))   # Windows-safe helper (R/calc.R)
