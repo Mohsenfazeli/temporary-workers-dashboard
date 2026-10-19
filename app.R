@@ -15,7 +15,7 @@
 
 # ---- 0. Packages: install any that are missing, then load them -------------
 required_packages <- c("shiny", "bslib", "bsicons", "plotly", "DT", "dplyr",
-                       "tidyr", "readr", "readxl", "lubridate", "scales",
+                       "tidyr", "readr", "lubridate", "scales",
                        "shinyWidgets", "shinycssloaders", "htmltools")
 missing_packages <- required_packages[
   !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)]
@@ -25,32 +25,39 @@ if (length(missing_packages) > 0) {
 suppressPackageStartupMessages({
   library(shiny)
   library(bslib)
+  library(lubridate)   # %m-% for the quick period buttons
 })
 
 # ---- 1. Load the data ONCE when the app starts --------------------------------
-# By default load_data() reads the two IRCC CSVs (and the Excel reference)
-# live from IRCC. For testing on a machine that cannot reach IRCC, set the
-# environment variable TW_LOCAL_DIR to a folder holding the same four files.
-local_dir <- Sys.getenv("TW_LOCAL_DIR", "")
-if (nzchar(local_dir)) {
-  core_sources <- c(TFWP = file.path(local_dir, "ODP-TR-Work-TFWP-PT_program.csv"),
-                    IMP  = file.path(local_dir, "ODP-TR-Work-IMP-PT_program.csv"))
-  ref_sources  <- c(TFWP = file.path(local_dir, "EN_ODP-TR-Work-TFWP_PT_program_sign.xlsx"),
-                    IMP  = file.path(local_dir, "EN_ODP-TR-Work-IMP_PT_program_sign.xlsx"))
-} else {
-  core_sources <- IRCC_URLS
-  ref_sources  <- IRCC_REFERENCE_URLS
+# Default: the frozen, verified IRCC release shipped with the app
+# (data/baseline.rds, IRCC open data release of September 15, 2026), so every
+# visitor sees the same checked numbers and the page never depends on IRCC's
+# server. Options (environment variables, for maintainers):
+#   TW_DATA_SOURCE = "live"  read the two IRCC CSVs live; a download must pass the baseline check or
+#                            the saved copy is shown with a notice (R/data.R)
+#   TW_LOCAL_DIR = <folder>  read the same two files from a local folder
+#                            (testing on a machine that cannot reach IRCC)
+local_dir   <- Sys.getenv("TW_LOCAL_DIR", "")
+data_source <- tolower(Sys.getenv("TW_DATA_SOURCE", "release"))
+read_files <- function(core_sources) {
+  load_data(sources = core_sources,
+            cache_path = file.path("data", "cache.rds"),
+            # verified copy: new downloads must match it for settled
+            # months, or the app keeps its saved data (see R/data.R)
+            baseline_path = file.path("data", "baseline.rds"),
+            timeout = as.numeric(Sys.getenv("TW_TIMEOUT", "60")),   # per download (server reachable)
+            tries = as.integer(Sys.getenv("TW_TRIES", "2")))
 }
-bundle <- load_data(sources = core_sources, reference_sources = ref_sources,
-                    cache_path = file.path("data", "cache.rds"),
-                    # verified copy: new downloads must match it for settled
-                    # months, or the app keeps its saved data (see R/data.R)
-                    baseline_path = file.path("data", "baseline.rds"),
-                    timeout = as.numeric(Sys.getenv("TW_TIMEOUT", "60")),   # per download (server reachable)
-                    tries = as.integer(Sys.getenv("TW_TRIES", "2")))
+bundle <- if (nzchar(local_dir)) {
+  read_files(c(TFWP = file.path(local_dir, "ODP-TR-Work-TFWP-PT_program.csv"),
+               IMP  = file.path(local_dir, "ODP-TR-Work-IMP-PT_program.csv")))
+} else if (identical(data_source, "live")) {
+  read_files(IRCC_URLS)
+} else {
+  load_release(file.path("data", "baseline.rds"))
+}
 DATA <- bundle$data            # tidy table used by every tab
 META <- bundle$meta            # retrieval time, latest month, source...
-REF  <- bundle$reference       # IRCC distinct-people reference (may be NULL)
 
 # Slider months, years and latest month all come from the data itself.
 MONTHS        <- month_choices(DATA)
@@ -60,8 +67,14 @@ GEOGRAPHIES   <- c("Canada", PROVINCES_TERRITORIES)
 # ---- 2. User interface ----------------------------------------------------------
 status_bar <- htmltools::div(
   class = "status-bar", role = "status",
-  htmltools::tags$span(htmltools::tags$strong("Data last retrieved: "),
-                       fmt_datetime(META$retrieved_at)),
+  if (identical(META$source, "release")) {
+    # Default: the frozen release, labelled plainly with IRCC's release date
+    htmltools::tags$span(htmltools::tags$strong("Data: "),
+      paste0(META$source_label, " (", fmt_month(META$first_month), " to ", fmt_month(META$latest_month), ")"))
+  } else {
+    htmltools::tags$span(htmltools::tags$strong("Data last retrieved: "),
+                         fmt_datetime(META$retrieved_at))
+  },
   " \u00b7 ",
   htmltools::tags$span(htmltools::tags$strong("Latest month available: "),
                        fmt_month(META$latest_month)),
@@ -74,6 +87,11 @@ status_bar <- htmltools::div(
     sub("([^.])$", "\\1.", META$warning), " ", META$cache_note)
 )
 
+# Months of the latest (partial) year, e.g. "Jan\u2013Jul", for the
+# "same months each year" option in the annual view.
+LATEST_M   <- as.integer(format(META$latest_month, "%m"))
+YTD_MONTHS <- if (LATEST_M == 1) "Jan" else paste0("Jan\u2013", month.abb[LATEST_M])
+
 sidebar_controls <- bslib::sidebar(
   width = 290, id = "sidebar", title = "Filters (apply to every tab)",
   # Open on desktop; on a phone the filters sit above the charts.
@@ -82,8 +100,20 @@ sidebar_controls <- bslib::sidebar(
     "range", "Period (month the permit took effect)",
     choices = MONTH_LABELS, selected = c(MONTH_LABELS[1], tail(MONTH_LABELS, 1)),
     grid = FALSE, force_edges = TRUE, width = "100%"),
+  # Quick periods: set the slider in one click
+  htmltools::div(class = "quick-periods", role = "group", `aria-label` = "Quick periods",
+    shiny::actionButton("qp_full", "Full period", class = "btn-sm btn-outline-secondary"),
+    shiny::actionButton("qp_12m", "Last 12 months", class = "btn-sm btn-outline-secondary"),
+    shiny::actionButton("qp_ytd", paste(format(META$latest_month, "%Y"), "so far"), class = "btn-sm btn-outline-secondary"),
+    shiny::actionButton("qp_2019", "2019 to latest", class = "btn-sm btn-outline-secondary")),
   shiny::radioButtons("resolution", "View", choices = c("Monthly", "Annual"),
                       selected = "Annual", inline = TRUE),
+  # Annual view only: compare the same months of every year (e.g. Jan-Jul),
+  # so the latest part-year is not read against full years.
+  if (LATEST_M < 12) shiny::conditionalPanel("input.resolution == 'Annual'",
+    shiny::checkboxInput("same_months",
+      sprintf("Same months each year (%s), to compare with %s", YTD_MONTHS, format(META$latest_month, "%Y")),
+      value = FALSE)),
   shiny::selectInput("geography", "Geography", choices = GEOGRAPHIES, selected = "Canada"),
   shiny::radioButtons("program", "Program",
                       choices = c("Both programs" = "Both", "TFWP only" = "TFWP",
@@ -128,8 +158,19 @@ server <- function(input, output, session) {
     list(start = MONTHS[min(idx)], end = MONTHS[max(idx)],
          resolution = input$resolution, geography = input$geography,
          program_choice = input$program,
-         programs = programs_from_choice(input$program))
+         programs = programs_from_choice(input$program),
+         # January to the latest month in every year, or NULL (option off)
+         last_moy = same_months_limit(input$same_months, input$resolution, META$latest_month))
   })
+
+  # Quick period buttons: move the slider like a user would.
+  set_period <- function(from, to) shinyWidgets::updateSliderTextInput(session, "range",
+    selected = c(MONTH_LABELS[match(from, MONTHS)], MONTH_LABELS[match(to, MONTHS)]))
+  last_m <- max(MONTHS)
+  shiny::observeEvent(input$qp_full, set_period(min(MONTHS), last_m))
+  shiny::observeEvent(input$qp_12m,  set_period(last_m %m-% months(11), last_m))
+  shiny::observeEvent(input$qp_ytd,  set_period(lubridate::floor_date(last_m, "year"), last_m))
+  shiny::observeEvent(input$qp_2019, set_period(max(min(MONTHS), as.Date("2019-01-01")), last_m))
 
   # Reset button: back to the full period, Canada, both programs, annual.
   shiny::observeEvent(input$reset, {
@@ -138,14 +179,15 @@ server <- function(input, output, session) {
     shiny::updateRadioButtons(session, "resolution", selected = "Annual")
     shiny::updateSelectInput(session, "geography", selected = "Canada")
     shiny::updateRadioButtons(session, "program", selected = "Both")
+    shiny::updateCheckboxInput(session, "same_months", value = FALSE)
   })
 
-  overview_server("overview", sel, DATA, META)
-  trends_server("trends", sel, DATA, META, REF)
+  overview_server("overview", sel, DATA, META)   # also shows "What the data show"
+  trends_server("trends", sel, DATA, META)
   geography_server("geography", sel, DATA, META)
-  composition_server("composition", sel, DATA, META)
+  composition_server("composition", sel, DATA, META, bundle$detail)
   data_server("data", sel, DATA, META)
-  about_server("about", DATA, META, REF)
+  about_server("about", DATA, META)
 }
 
 shiny::shinyApp(ui, server)

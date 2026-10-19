@@ -25,8 +25,7 @@ Prepared Fri Oct 16, 2026 (PT). Built by `tools/build_cache_and_profile.R`; full
   - IRCC's titles for both files: "work permit holders by province/territory of intended destination, program and **year in which permit(s) became effective**".
   - The catalogue publishes separate "**on December 31st**" files for the stock (people holding a valid permit). These two files are not those.
   - The catalogue description: "Datasets include … work permit holders by year in which permit(s) became effective or with a valid permit on December 31st."
-- **De-duplication (superseded; see section 14):** the CSVs have no footnotes and **no annual or total columns**, so there is no IRCC annual figure to compare against the sum of the months. IRCC's companion tables (the XLSX versions) carry notes saying a person can hold more than one permit in a period, so unique-person totals can differ from sums. I've only seen that note quoted by a third party, not in these files. So a summed annual figure is best described as "work permits that took effect", which can be slightly more than the number of distinct people.
-- **Plausibility check:** every month from Dec 2023 to Jul 2026 in these files is at least as large as IRCC's published "new worker arrivals" for that month (canada.ca *Understanding student and temporary worker numbers in Canada*, data as of Jul 31, 2026). That's what you'd expect, because arrivals are a narrower flow that leaves out extensions and agricultural workers: 32 of 32 months for TFWP and 32 of 32 for IMP.
+- **De-duplication:** the CSVs have no annual or total columns, so annual figures are sums of the months. A person whose permits took effect in two different months is counted twice, so a summed annual figure is described as "work permits that took effect", not people.
 
 ## 4. Coverage
 - Both files run from **January 2015 to July 2026**, the latest month. That's 139 months, with no gaps: 12 months for each year from 2015 to 2025 and 7 months for 2026. This matches the catalogue's coverage dates.
@@ -70,7 +69,7 @@ The file does not split the TFWP into high-wage and low-wage streams.
 | Vulnerable workers | Level 2 = Vulnerable workers | 24,815 |
 | Unknown or other IMP | Level 2 = Other IMP Participants (almost entirely "Unknown International Mobility Program") | 734,880 |
 
-- Watch out: **"Unknown IMP" is close to 0 before 2021**, then 28,610 in 2021, 105,655 in 2022, 198,785 in 2023 and 96,970 in Jan–Jul 2026. Part of the composition shift is about recording, not real change, and the dashboard must say so.
+- Watch out: **"Unknown IMP" is close to 0 before 2021**, then 28,610 in 2021, 105,655 in 2022, 198,785 in 2023 and 96,970 in Jan–Jul 2026. IRCC does not identify the program for these permits, so shares of the other IMP categories are lower in those years; the dashboard says so and can show shares of permits with a known program only.
 - The raw levels 2–5 are kept in the `detail` table, so a finer breakdown is possible.
 - Any new IRCC code that matches no rule goes to "Other TFWP" or "Unknown or other IMP" and is listed in the metadata.
 
@@ -96,7 +95,6 @@ The files publish no totals of their own, so I recomputed three months independe
 | April 2020 | 13,045 | 16,490 | 29,535 | 9 / 101 | matches |
 | July 2026 | 13,255 | 59,240 | 72,495 | 6 / 219 | matches |
 
-- IRCC publishes official totals for this table only in its XLSX versions (`EN_ODP-TR-Work-TFWP_PT_program_sign.xlsx` and `EN_ODP-TR-Work-IMP_PT_program_sign.xlsx`), and those are also on the IRCC server this machine can't reach. **Update:** this comparison was done later with copies Mohsen downloaded (see section 14). The monthly totals agree within the masking bound. The arrivals-page check in section 3 is consistent with these numbers.
 
 Annual national totals (sums of months):
 
@@ -115,13 +113,10 @@ Annual national totals (sums of months):
 | 2025 | 169,330 | 585,585 |
 | 2026 YTD (Jan–Jul) | 112,790 | 560,490 |
 
-## 10b. Check against IRCC's own Excel tables (added Oct 16, 2026, 5:10 PM PT)
-See section 14. In short, the monthly totals agree with IRCC's Excel totals once masking is allowed for, but **IRCC's annual totals are de-duplicated counts of persons, 1–4% below the sum of the months**.
-
 ## 11. What load_data() returns
 - `data`: the tidy table, with columns month, year, geography, geo_type, program, category, value, cells, masked_cells and any_masked.
 - `detail`: the cleaned cell-level rows, with all IRCC levels.
-- `meta`: source (`live`, `local file` or `cache`), source_label, retrieved_at (PT), first_month and latest_month (both taken from the data), the URLs, per-file encoding, delimiter, header row, row count, columns and footnotes, the masked counts, the number of built-in totals removed, any unmapped categories, and cache_note.
+- `meta`: source (`release` by default, or `live`, `local file` or `cache`), source_label, retrieved_at (PT), first_month and latest_month (both taken from the data), the URLs, per-file encoding, delimiter, header row, row count, columns and footnotes, the masked counts, the number of built-in totals removed, any unmapped categories, and cache_note.
 - How it behaves:
   - It tries the live URLs first, with a browser user-agent, a 60-second timeout and 3 tries.
   - A local-path override is available for testing and goes through the same parsing code.
@@ -139,61 +134,18 @@ See section 14. In short, the monthly totals agree with IRCC's Excel totals once
 6. TFWP and IMP don't overlap, so "both" = TFWP + IMP.
 7. Province/territory means the **intended** destination recorded on the permit, not where the person actually lives.
 8. Values are taken as published. Sums of rounded cells may differ slightly from totals IRCC publishes elsewhere.
-9. Program categories are grouped as in the tables in section 7. "Unknown IMP" is shown as its own category, with a note that its rise after 2021 reflects recording practice.
-10. Data are as published on the retrieval date. IRCC may revise past months in later releases.
+9. Program categories are grouped as in the tables in section 7. "Unknown IMP" is shown as its own category, because IRCC does not identify the program for these permits.
+10. By default the dashboard shows the IRCC release of September 15, 2026 (IRCC files' Last-Modified date and the Open Government catalogue's date modified, checked October 18, 2026). IRCC may revise past months in later releases.
 11. The month is the month the permit took effect, not the month the application was made or the person arrived.
-12. **Reference only:** IRCC's Excel tables (`EN_ODP-TR-Work-TFWP_PT_program_sign.xlsx` and `EN_ODP-TR-Work-IMP_PT_program_sign.xlsx`) are read live and kept in the cache, and they are used **only** for Canada's annual counts of distinct people (TFWP and IMP). These appear as labelled reference markers on the annual trend chart (Canada, Annual view) and in a comparison table in About. No other figure in the dashboard comes from the Excel tables. If they can't be read, the dashboard still works without the reference and shows a short note saying so.
+12. **Only the two IRCC CSV files are used** (decision by Mohsen, October 18, 2026). No other table, including IRCC's Excel versions of these tables, and no non-IRCC data (for example population) are read, stored or shown. Event lines and notes cite official Government of Canada news releases and notices as dated context only, with no figures from them.
 
 ## 13. Files
 - `R/data.R`: `load_data()` and helpers.
-- `data/cache.rds`: offline fallback, including the Excel reference (about 774,500 bytes).
+- `data/cache.rds`: offline fallback (the two CSVs, processed).
 - `tools/build_cache_and_profile.R`: rebuilds the cache and the checks.
 - `raw_profile/`: the downloaded CSVs (not for submission), `ckan.json` (catalogue metadata), `profile_output.txt`.
 
-## 14. Check against IRCC's published Excel tables
-Files: `EN_ODP-TR-Work-TFWP_PT_program_sign.xlsx` and `EN_ODP-TR-Work-IMP_PT_program_sign.xlsx`. Mohsen downloaded both on his PC on Oct 16, 2026 and they were copied to `raw_profile/`. I used them only to verify the CSV figures; they are not dashboard data. Script: `raw_profile/xlsx_check.py`. Both tables are stamped "Source: IRCC, July 31, 2026" and cover January 2015 to July 2026, the same as the CSVs.
+## 14. Data sources used (updated October 18, 2026)
+Only the two IRCC CSV files listed in section 1 are used. An earlier version of this profile also compared the CSVs with IRCC's Excel versions of the same tables and with IRCC's new-arrivals web page, and the dashboard had an optional, off-by-default reference of IRCC's annual count of distinct people taken from the Excel tables. Following Mohsen's decision to use only the two data sources named in the assignment, that comparison, the reference layer and its stored copy were removed from the dashboard, the tests, the cached data and this profile.
 
-**Structure:** one sheet per program. Rows are province/territory × program with a "<P/T> Total" row for each and a national "Total" row. Columns are months, quarter totals and year totals. Explicit zeros are shown as 0, and 1–5 as "--".
-
-**IRCC's footnotes (verbatim):**
-- "all values between 0 and 5 are shown as "--" … All other values are rounded to the closest multiple of 5 …; as a result of rounding, data may not sum to the totals indicated."
-- "Data are preliminary estimates and are subject to change."
-- "The total unique count may not equal to the sum of permit holders in each program as an individual may hold more than one type of permit over a given period."
-- IMP only: "This table includes information on a subset of IMP work permit holders. It does not include IMP work permit holders who may be in Canada for reasons other than primarily working (e.g. for asylum claimants or Humanitarian and Compassionate reasons)."
-- "… count TRs … based on the type of permit held by a TR (effective from the date that the permit was signed, or a valid permit at the end of a given year)."
-
-**Measure definition: confirmed as a flow.** Counts are of people whose permit took effect (was signed) in the period.
-
-**Monthly totals: consistent.**
-- National, all 278 program-months: the Excel total is 0 to 420 above our sum of the CSV cells. The average gap is +268 a month for IMP (about 0.5%) and +21 for TFWP (about 0.2%).
-- Every gap is within 5 × the number of masked cells plus rounding (278 of 278). That is what counting "--" as 0 is expected to do: IRCC totals the unrounded figures, while we add up cells that were already rounded or masked.
-- Provinces and territories: 3,613 of 3,619 program-months fall within the same bound. The other 6 are off by 5–10, which is rounding.
-
-| Month (Canada) | Excel TFWP | CSV TFWP | Excel IMP | CSV IMP |
-|---|---|---|---|---|
-| June 2016 | 11,295 | 11,260 | 26,235 | 26,005 |
-| April 2020 | 13,065 | 13,045 | 16,710 | 16,490 |
-| July 2026 | 13,260 | 13,255 | 59,645 | 59,240 |
-
-British Columbia, same months (TFWP / IMP), Excel vs CSV:
-- June 2016: 2,115 vs 2,120 / 4,650 vs 4,630
-- April 2020: 1,465 vs 1,465 / 3,360 vs 3,325
-- July 2026: 3,420 vs 3,420 / 9,925 vs 9,925
-
-**Annual totals: not a sum of months.** IRCC's "Year Total" column is a unique count of persons for the year. It is always below the sum of IRCC's own monthly totals, because someone with permits in two different months is counted once.
-
-| Year | TFWP sum of Excel months | TFWP Excel year total | Gap | IMP sum of Excel months | IMP Excel year total | Gap |
-|---|---|---|---|---|---|---|
-| 2015 | 75,705 | 72,955 | −3.6% | 191,730 | 186,195 | −2.9% |
-| 2019 | 100,260 | 98,025 | −2.2% | 333,450 | 323,475 | −3.0% |
-| 2023 | 187,980 | 183,180 | −2.6% | 785,920 | 761,200 | −3.1% |
-| 2024 | 194,830 | 190,790 | −2.1% | 733,510 | 713,945 | −2.7% |
-| 2025 | 169,530 | 166,470 | −1.8% | 589,715 | 578,335 | −1.9% |
-| 2026 (Jan–Jul) | 112,920 | 111,900 | −0.9% | 562,830 | 557,735 | −0.9% |
-
-- Compared with our CSV sums, IRCC's annual national totals are 1.2–2.7% lower in 2019–2025.
-- Quarter totals are also unique counts.
-- For small provinces, territories and categories the gap can be larger; up to −17% was seen in one TFWP province-year.
-- **The two CSVs cannot reproduce IRCC's annual person counts.** They only have monthly cells.
-
-**Effect on the assumptions (resolved):** Mohsen chose option C. Annual figures in the dashboard stay as the sum of the months, labelled "work permits that took effect during the year". IRCC's annual distinct-people totals for Canada are shown alongside them as a clearly labelled reference, with the footnote quoted and the 1–3% gap explained (assumptions 1 and 12).
+The caveats repeated in the dashboard text are IRCC's own notes for these tables: values of 0 to 5 are shown as "--" and other values are rounded to the nearest 5 (catalogue description); the data are preliminary estimates subject to change; and the IMP table covers a subset of IMP work permit holders, excluding people in Canada mainly for reasons other than work (for example asylum claimants).

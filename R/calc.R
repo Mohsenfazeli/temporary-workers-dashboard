@@ -109,11 +109,23 @@ month_choices <- function(data) {
 }
 
 # Keep rows for one geography, the chosen programs and a month range.
+# `last_moy` (optional, 1-12): keep only January to that month in every year,
+# for the "same months each year" comparison in the annual view.
 filter_selection <- function(data, start, end, geography = "Canada",
-                             programs = c("TFWP", "IMP")) {
-  data |>
+                             programs = c("TFWP", "IMP"), last_moy = NULL) {
+  out <- data |>
     filter(month >= as.Date(start), month <= as.Date(end),
            geography == !!geography, program %in% programs)
+  if (!is.null(last_moy)) out <- out[as.integer(format(out$month, "%m")) <= last_moy, ]
+  out
+}
+
+# The months of year to keep for the "same months each year" option: January
+# to the latest month of the latest (partial) year, e.g. 7 for Jan-Jul.
+# NULL when the option is off, the view is monthly, or the latest year is full.
+same_months_limit <- function(on, resolution, latest_month) {
+  m <- as.integer(format(as.Date(latest_month), "%m"))
+  if (isTRUE(on) && identical(resolution, "Annual") && m < 12) m else NULL
 }
 
 # ---- 4. Period labels for the annual view -----------------------------------
@@ -176,6 +188,11 @@ summarise_series <- function(df, resolution = "Monthly", by = "program",
              months  = as.integer(last_m - first_m + 1),
              partial = months < 12,
              label   = year_label(year, first_m, last_m, latest_month)) |>
+      # When every year shown covers the same months (e.g. Jan-Jul of every
+      # year, the "same months each year" option), the years are comparable,
+      # so none is marked as a part-year.
+      mutate(partial = if (dplyr::n_distinct(year) > 1 && dplyr::n_distinct(first_m) == 1 &&
+                           dplyr::n_distinct(last_m) == 1) FALSE else partial) |>
       select(-first_m, -last_m)
   }
 }
@@ -252,6 +269,39 @@ kpi_latest <- function(data, end, geography, programs) {
        prev_month = prev_month,
        prev_value = if (has_prev) sum(prev$value) else NA_real_,
        change = if (has_prev) pct_change(sum(cur$value), sum(prev$value)) else NA_real_)
+}
+
+#' Latest full calendar year up to the end of the selection (Overview card 1).
+#' E.g. a selection ending July 2026 gives 2025; one ending December 2024
+#' gives 2024. Returns the year, its total and the change from the year before.
+kpi_full_year <- function(data, end, geography, programs) {
+  end <- as.Date(end)
+  yr <- as.integer(format(end, "%Y")) - if (format(end, "%m") == "12") 0L else 1L
+  first_year <- as.integer(format(min(data$month), "%Y")) +
+    if (format(min(data$month), "%m") == "01") 0L else 1L
+  if (yr < first_year) return(list(year = NA_integer_, value = NA_real_, prev_value = NA_real_, change = NA_real_))
+  tot <- function(y) sum(filter_selection(data, lubridate::make_date(y, 1, 1),
+                                          lubridate::make_date(y, 12, 1), geography, programs)$value)
+  v <- tot(yr); pv <- if (yr - 1 >= first_year) tot(yr - 1) else NA_real_
+  list(year = yr, value = v, prev_value = pv, change = pct_change(v, pv))
+}
+
+#' Year to date at the end of the selection vs the same months a year
+#' earlier (Overview card 2), e.g. Jan-Jul 2026 vs Jan-Jul 2025. When the
+#' selection ends in December this is the full year vs the year before.
+kpi_ytd_compare <- function(data, end, geography, programs) {
+  end <- as.Date(end)
+  yr <- as.integer(format(end, "%Y")); m <- as.integer(format(end, "%m"))
+  cur_start <- lubridate::make_date(yr, 1, 1); prev_start <- lubridate::make_date(yr - 1, 1, 1)
+  prev_end <- lubridate::make_date(yr - 1, m, 1)
+  months_tx <- if (m == 1) "Jan" else paste0("Jan\u2013", month.abb[m])
+  cur <- sum(filter_selection(data, cur_start, end, geography, programs)$value)
+  has_prev <- prev_start >= min(data$month)
+  prev <- if (has_prev) sum(filter_selection(data, prev_start, prev_end, geography, programs)$value) else NA_real_
+  list(year = yr, months = months_tx, value = cur, prev_value = prev,
+       change = pct_change(cur, prev),
+       label = if (m == 12) sprintf("%d vs %d", yr, yr - 1)
+               else sprintf("%s %d vs %s %d", months_tx, yr, months_tx, yr - 1))
 }
 
 #' Change over the selected period.
@@ -352,13 +402,36 @@ compare_with_canada <- function(data, start, end, geography, programs,
 # ---- 9. Composition -----------------------------------------------------------
 
 #' Category shares within each period (for stacked 100% bars).
+#' known_only = TRUE leaves out permits whose program IRCC does not identify
+#' ("Unknown or other IMP"), so shares are of permits with a known program.
 composition_shares <- function(df, resolution = "Annual",
-                               latest_month = max(df$month)) {
+                               latest_month = max(df$month), known_only = FALSE) {
+  if (known_only) df <- df[df$category != "Unknown or other IMP", ]
   summarise_series(df, resolution, by = c("program", "category"),
                    latest_month = latest_month) |>
     group_by(period, program) |>
     mutate(share = if (sum(value) > 0) value / sum(value) else NA_real_) |>
     ungroup()
+}
+
+#' IRCC's own program names inside each grouped category, with permits, for
+#' the Composition detail table. `detail` is the cell-level table from
+#' load_data() (provinces, territories and "not stated"; Canada = all of them).
+#' The name shown is the most detailed IRCC level given ("Program not stated"
+#' levels are skipped).
+category_detail_table <- function(detail, start, end, geography, programs) {
+  d <- detail[detail$month >= as.Date(start) & detail$month <= as.Date(end) &
+                detail$program %in% programs, ]
+  if (geography != "Canada") d <- d[d$geography == geography, ]
+  # Most detailed level that is given (vectorised: level 5, else 4, 3, 2)
+  given <- function(x) !is.na(x) & nzchar(x) & x != "Program not stated"
+  d$ircc_name <- ifelse(given(d$level_5), d$level_5, ifelse(given(d$level_4), d$level_4,
+                   ifelse(given(d$level_3), d$level_3, ifelse(given(d$level_2), d$level_2, "Program not stated"))))
+  out <- stats::aggregate(value ~ program + category + ircc_name, data = d, FUN = sum)
+  out <- out[order(out$program, out$category, -out$value), ]
+  data.frame(Program = out$program, Category = as.character(out$category),
+             `IRCC program name` = out$ircc_name, Permits = out$value,
+             check.names = FALSE, stringsAsFactors = FALSE)
 }
 
 #' Category totals for the whole selected period, largest first.
@@ -583,32 +656,100 @@ geo_phrase <- function(geography) {
 
 unknown_imp_note_text <- function(data, geography, latest_month) {
   where <- geo_phrase(geography)
-  # Rows for the "Unknown or other IMP" category in the selected geography
-  u <- data[data$geography == geography & data$category == "Unknown or other IMP", ]
+  # IMP rows for the selected geography, full calendar years only
+  imp <- data[data$geography == geography & data$program == "IMP", ]
   latest_year <- as.integer(format(latest_month, "%Y"))
-  u <- u[u$year != latest_year, ]                     # full calendar years only
-  if (nrow(u) == 0) {
-    # No full years in the data: describe the coding issue without numbers
-    return(sprintf("IRCC records some IMP permits as \"Unknown International Mobility Program\" (no full calendar year of data %s to count them). ", where))
+  imp <- imp[imp$year != latest_year, ]
+  lead <- "IRCC does not identify the program for some IMP permits (\"Unknown International Mobility Program\")"
+  if (nrow(imp) == 0) {
+    return(sprintf("%s; there is no full calendar year of data %s to count them. ", lead, where))
   }
-  by_year <- tapply(u$value, u$year, sum)             # permits per full year
-  masked <- any(u$any_masked)                         # any suppressed cell used?
+  is_u <- imp$category == "Unknown or other IMP"
+  u_by   <- tapply(imp$value * is_u, imp$year, sum)       # unknown-program permits per year
+  all_by <- tapply(imp$value, imp$year, sum)              # all IMP permits per year
+  masked <- any(imp$any_masked[is_u])                     # any suppressed cell used?
   mask_note <- if (masked) " Suppressed IRCC counts (0 to 5) are counted as 0." else ""
-  if (all(by_year == 0)) {
-    return(sprintf("IRCC records no IMP permits %s as \"Unknown International Mobility Program\" in %s\u2013%s.%s ",
-                   where, names(by_year)[1], names(by_year)[length(by_year)], mask_note))
+  yrs <- names(u_by)
+  if (all(u_by == 0)) {
+    return(sprintf("No IMP permits %s are in IRCC's \"Unknown International Mobility Program\" group in %s\u2013%s.%s ",
+                   where, yrs[1], yrs[length(yrs)], mask_note))
   }
-  peak <- names(by_year)[which.max(by_year)]          # first year with the most
-  years <- as.integer(names(by_year))
-  early <- by_year[years <= 2020]                     # 2015-2020 (if in the data)
-  early_txt <- if (length(early) > 0) {
-    sprintf("%s in %s\u20132020 combined; ", fmt_n(sum(early)), min(years))
-  } else ""
-  # Say "growing" (and point to the recording change) only when the data show
-  # it: the peak is after 2020 and above the 2015-2020 yearly average.
-  growing <- as.integer(peak) > 2020 && (length(early) == 0 || mean(early) < max(by_year))
-  sprintf("IRCC records %s IMP permits %s as \"Unknown International Mobility Program\" (%sa peak of %s in %s).%s %s",
-          if (growing) "a growing number of" else "some", where, early_txt,
-          fmt_n(max(by_year)), peak, mask_note,
-          if (growing) "Part of the shift in the IMP mix after 2021 reflects how permits were recorded, not only real change." else "")
+  # Years from the first year in which they were at least 1% of IMP permits
+  # to the last full year (tiny early counts are described, not ranged)
+  share_all <- ifelse(all_by > 0, u_by / all_by, 0)
+  first_u <- which(share_all >= 0.01)[1]
+  if (is.na(first_u)) first_u <- which(u_by > 0)[1]
+  span <- first_u:length(u_by)
+  share <- share_all[span]
+  none_before <- if (first_u == 1) sprintf("%s, in ", sub("^i", "I", sub("^a", "A", where)))
+    else if (all(u_by[seq_len(first_u - 1)] == 0)) sprintf("There were none %s in %s\u2013%s; in ", where, yrs[1], yrs[first_u - 1])
+    else sprintf("They were under 1%% of IMP permits %s in %s\u2013%s; in ", where, yrs[1], yrs[first_u - 1])
+  peak <- yrs[which.max(u_by)]
+  range_tx <- if (length(span) > 1) sprintf("%s\u2013%s they were %s to %s of IMP permits each year",
+                                            yrs[first_u], yrs[length(yrs)], fmt_share(min(share)), fmt_share(max(share)))
+              else sprintf("%s they were %s of IMP permits", yrs[first_u], fmt_share(share[1]))
+  sprintf("%s. %s%s (a peak of %s in %s).%s Tick \"known program only\" to see shares of the permits whose program is known. ",
+          lead, none_before, range_tx, fmt_n(max(u_by)), peak, mask_note)
+}
+
+# ---- 13. "What the data show": fixed points for the release --------------------
+#' Three or four short, neutral points for Canada, computed from the data and
+#' dated to the release (Overview). A point is only included when the data
+#' support it; each number is printed exactly as computed here.
+#' @return character vector of sentences
+release_highlights <- function(data, latest_month) {
+  latest_month <- as.Date(latest_month)
+  ca <- data[data$geography == "Canada", ]
+  ly <- as.integer(format(latest_month, "%Y")); lm <- as.integer(format(latest_month, "%m"))
+  months_tx <- if (lm == 1) "January" else paste(month.name[1], "to", month.name[lm])
+  ytd <- function(y) ca[ca$year == y & as.integer(format(ca$month, "%m")) <= lm, ]
+  cur <- ytd(ly); prev <- ytd(ly - 1)
+  out <- character()
+
+  # 1. IMP share of all permits (whole period and latest year to date)
+  imp_all <- sum(ca$value[ca$program == "IMP"]) / sum(ca$value)
+  imp_cur <- sum(cur$value[cur$program == "IMP"]) / sum(cur$value)
+  about <- if (imp_all >= 0.75 && imp_all < 0.85) "about 4 in 5 work permits: " else ""
+  out <- c(out, sprintf("The International Mobility Program (IMP) accounts for %s%s from %s to %s, and %s in %s %d.",
+                        about, fmt_share(imp_all), fmt_month(min(ca$month)), fmt_month(latest_month),
+                        fmt_share(imp_cur), months_tx, ly))
+
+  # 2. The largest category and its part in the latest change
+  by_cat <- function(x) tapply(x$value, as.character(x$category), sum)
+  top_by_year <- vapply(sort(unique(ca$year)), function(y) names(which.max(by_cat(ca[ca$year == y, ]))), "")
+  names(top_by_year) <- sort(unique(ca$year))
+  top_now <- names(which.max(by_cat(cur)))
+  run <- rev(cumprod(rev(top_by_year == top_now)))           # years in a row up to the latest
+  since <- names(top_by_year)[which(run == 1)[1]]
+  chg <- by_cat(cur) - by_cat(prev)[names(by_cat(cur))]
+  tot_chg <- sum(cur$value) - sum(prev$value)
+  if (tot_chg > 0 && names(which.max(chg)) == top_now) {
+    out <- c(out, sprintf("%s are the largest category in every year since %s. They made up %s (%s) of the %s increase in %s %d compared with the same months of %d.",
+                          if (top_now == "Post-graduation work permits") "Post-graduation work permits (PGWPs)" else top_now,
+                          since, fmt_n(chg[top_now]), fmt_share(chg[top_now] / tot_chg),
+                          fmt_n(tot_chg), months_tx, ly, ly - 1))
+  } else {
+    out <- c(out, sprintf("%s are the largest category in %s %d.", top_now, months_tx, ly))
+  }
+
+  # 3. Spouse and family permits: peak year, latest full year, latest months
+  sp <- ca[ca$category == "Spouses and family members", ]
+  sp_y <- tapply(sp$value[sp$year < ly], sp$year[sp$year < ly], sum)
+  pk <- names(sp_y)[which.max(sp_y)]
+  sp_cur <- sum(ytd(ly)$value[ytd(ly)$category == "Spouses and family members"])
+  sp_prev <- sum(ytd(ly - 1)$value[ytd(ly - 1)$category == "Spouses and family members"])
+  if (as.integer(pk) < ly - 1 && sp_y[length(sp_y)] < max(sp_y) && sp_cur < sp_prev) {
+    out <- c(out, sprintf("Spouse and family permits fell from %s in %s to %s in %s, and %s in %s %d was %s below the same months of %d. Eligibility for family open work permits was narrowed in January 2025 (marked on the Trends tab for context).",
+                          fmt_n(max(sp_y)), pk, fmt_n(sp_y[length(sp_y)]), names(sp_y)[length(sp_y)],
+                          fmt_n(sp_cur), months_tx, ly, sub("^-", "", fmt_pct(pct_change(sp_cur, sp_prev))), ly - 1))
+  }
+
+  # 4. Where: the largest provincial shares in the latest year to date
+  pt <- data[data$geo_type == "province/territory" & data$year == ly &
+               as.integer(format(data$month, "%m")) <= lm, ]
+  sh <- sort(tapply(pt$value, as.character(pt$geography), sum), decreasing = TRUE) / sum(cur$value)
+  out <- c(out, sprintf("%s (%s) and %s (%s) received the largest shares of permits in %s %d, followed by %s (%s).",
+                        names(sh)[1], fmt_share(sh[1]), names(sh)[2], fmt_share(sh[2]),
+                        months_tx, ly, names(sh)[3], fmt_share(sh[3])))
+  out
 }

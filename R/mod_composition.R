@@ -1,8 +1,9 @@
 # =============================================================================
 # R/mod_composition.R: Composition tab (mix of TFWP streams and IMP
-# sub-programs, and how the mix changed over time)
+# sub-programs, how the mix changed over time, and the IRCC program names
+# inside each grouped category)
 # =============================================================================
-required_packages <- c("shiny", "bslib", "plotly")
+required_packages <- c("shiny", "bslib", "plotly", "DT")
 missing_packages  <- required_packages[
   !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)]
 if (length(missing_packages) > 0) {
@@ -14,15 +15,25 @@ composition_ui <- function(id) {
   shiny::tagList(
     shiny::uiOutput(ns("unknown_note")),
     # Show the mix as shares (each program adds to 100%) or as numbers of permits
-    shiny::radioButtons(ns("measure"), "Show the mix over time as",
-                        choices = c("Share (%)" = "share", "Number of permits" = "number"),
-                        selected = "share", inline = TRUE),
+    htmltools::div(class = "d-flex flex-wrap gap-4 align-items-center",
+      shiny::radioButtons(ns("measure"), "Show the mix over time as",
+                          choices = c("Share (%)" = "share", "Number of permits" = "number"),
+                          selected = "share", inline = TRUE),
+      # Shares of the permits whose program IRCC identifies (leaves out
+      # "Unknown International Mobility Program"); off by default.
+      shiny::checkboxInput(ns("known_only"), "IMP shares: known program only", value = FALSE)),
     bslib::layout_columns(
       col_widths = bslib::breakpoints(sm = 12, lg = c(6, 6)),
       chart_card(ns, "share_tfwp", height = "470px"),
       chart_card(ns, "share_imp", height = "470px")
     ),
     chart_card(ns, "mix", height = "380px"),
+    # IRCC's own program names inside each grouped category (selected place,
+    # programs and period), so the grouping can be checked
+    bslib::card(class = "chart-card",
+      bslib::card_header(htmltools::tags$h3(shiny::textOutput(ns("detail_title"), inline = TRUE), class = "chart-title")),
+      bslib::card_body(DT::DTOutput(ns("detail_table"))),
+      bslib::card_footer(shiny::uiOutput(ns("detail_source")))),
     # Plain-language meaning of the program and category names (shared with About)
     bslib::card(class = "chart-card",
       bslib::card_header(htmltools::tags$h3("What the categories mean", class = "chart-title")),
@@ -30,13 +41,15 @@ composition_ui <- function(id) {
   )
 }
 
-composition_server <- function(id, sel, data, meta) {
+composition_server <- function(id, sel, data, meta, detail = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
 
     sel_df <- shiny::reactive({
-      s <- sel(); filter_selection(data, s$start, s$end, s$geography, s$programs)
+      s <- sel(); filter_selection(data, s$start, s$end, s$geography, s$programs, s$last_moy)
     })
-    period_mix <- shiny::reactive(composition_period(sel_df()))
+    period_mix <- shiny::reactive({
+      s <- sel(); composition_period(filter_selection(data, s$start, s$end, s$geography, s$programs))
+    })
 
     # Stacked shares (100%) or stacked numbers over time, one chart per program.
     share_plot <- function(prog) {
@@ -45,8 +58,9 @@ composition_server <- function(id, sel, data, meta) {
       if (!prog %in% s$programs) {
         return(empty_plot(sprintf("%s is not selected (see 'Program' in the sidebar)", prog)))
       }
+      known <- prog == "IMP" && isTRUE(input$known_only) && !as_number
       df <- composition_shares(sel_df() |> dplyr::filter(program == prog),
-                               s$resolution, meta$latest_month)
+                               s$resolution, meta$latest_month, known_only = known)
       df <- df[!is.na(df$share), ]            # periods with no permits at all
       if (nrow(df) == 0) return(empty_plot("No permits in this selection"))
       df <- df[order(df$period, df$category), ]
@@ -56,7 +70,9 @@ composition_server <- function(id, sel, data, meta) {
       cols <- CATEGORY_COLOURS[levels(df$category)]
       # The plotted value: the share of the program, or the number of permits
       df$y <- if (as_number) df$value else df$share
-      y_title <- if (as_number) "Work permits that took effect (number)" else "Share of the program's permits (%)"
+      y_title <- if (as_number) "Work permits that took effect (number)"
+                 else if (known) "Share of IMP permits with a known program (%)"
+                 else "Share of the program's permits (%)"
       y_fmt <- if (as_number) ",d" else ".0%"
       if (s$resolution == "Monthly") {
         p <- plotly::plot_ly(df, x = ~period, y = ~y, color = ~category, colors = cols,
@@ -96,9 +112,10 @@ composition_server <- function(id, sel, data, meta) {
     output$share_tfwp_plot  <- plotly::renderPlotly(share_plot("TFWP"))
     output$share_imp_plot   <- plotly::renderPlotly(share_plot("IMP"))
     output$share_tfwp_source <- shiny::renderUI(source_line(meta,
-      extra = "TFWP streams grouped by the author; mapping in About the data."))
+      extra = "Streams grouped by the author (see the table below)."))
     output$share_imp_source <- shiny::renderUI(source_line(meta,
-      extra = "IMP sub-programs grouped by the author; mapping in About the data."))
+      extra = if (isTRUE(input$known_only) && !identical(input$measure, "number"))
+        "Shares of permits with a known program." else "Sub-programs grouped by the author (see the table below)."))
 
     # Category totals for the whole period.
     output$mix_title <- shiny::renderText({
@@ -133,7 +150,27 @@ composition_server <- function(id, sel, data, meta) {
                        yaxis = list(tickformat = NULL))
     })
     output$mix_source <- shiny::renderUI(source_line(meta,
-      extra = "Bar colour shows the program: blue = TFWP, vermillion = IMP."))
+      extra = "Blue = TFWP, vermillion = IMP."))
+
+    # ---- IRCC program names inside each category ----
+    detail_tbl <- shiny::reactive({
+      shiny::req(!is.null(detail)); s <- sel()
+      category_detail_table(detail, s$start, s$end, s$geography, s$programs)
+    })
+    output$detail_title <- shiny::renderText({
+      s <- sel()
+      sprintf("IRCC program names in each category, %s, %s\u2013%s", s$geography,
+              fmt_month_short(s$start), fmt_month_short(s$end))
+    })
+    output$detail_table <- DT::renderDT({
+      DT::datatable(detail_tbl(), rownames = FALSE,
+                    options = list(pageLength = 10, dom = "ftip", order = list(list(3, "desc")),
+                                   columnDefs = list(list(className = "dt-right", targets = 3))),
+                    class = "compact stripe") |>
+        DT::formatRound("Permits", digits = 0, mark = ",")
+    }, server = FALSE)   # client-side: small table (at most about 130 rows)
+    output$detail_source <- shiny::renderUI(source_line(meta,
+      extra = "IRCC program names as published (most detailed level given)."))
 
     output$unknown_note <- shiny::renderUI({
       s <- sel()

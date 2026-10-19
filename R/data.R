@@ -26,15 +26,15 @@
 #      read fails, the layout has changed OR the baseline check fails, it
 #      loads that cache (or, if there is none, the baseline) instead and
 #      records a clear warning naming the problem.
-#  10. Also reads IRCC's two Excel tables, used ONLY as a reference for
-#      Canada's annual count of distinct people (IRCC de-duplicates people
-#      within a year, so these are 1-3% below the sum of the months). If the
-#      Excel read fails, the dashboard still works and hides the reference.
+#  10. load_release() opens the frozen, verified IRCC release shipped with the
+#      app (data/baseline.rds). This is what the dashboard shows by default,
+#      so every visitor sees the same, checked numbers; a live download is an
+#      option for maintainers (app.R, TW_DATA_SOURCE = "live").
+#  11. Only the two IRCC CSV files are read. No other data source is used.
 # =============================================================================
 
 # ---- 0. Packages: install any that are missing, then load them -------------
-required_packages <- c("dplyr", "tidyr", "readr", "lubridate", "tibble", "curl",
-                       "readxl")
+required_packages <- c("dplyr", "tidyr", "readr", "lubridate", "tibble", "curl")
 missing_packages  <- required_packages[
   !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)]
 if (length(missing_packages) > 0) {
@@ -46,7 +46,6 @@ suppressPackageStartupMessages({
   library(readr)
   library(lubridate)
   library(tibble)
-  library(readxl)
 })
 
 # ---- 1. Constants -----------------------------------------------------------
@@ -57,12 +56,7 @@ IRCC_URLS <- c(
   IMP  = "https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-IMP-PT_program.csv"
 )
 
-# Supplementary reference (Excel versions of the same tables). Used ONLY for
-# IRCC's distinct-people annual totals for Canada; never for the core data.
-IRCC_REFERENCE_URLS <- c(
-  TFWP = "https://www.ircc.canada.ca/opendata-donneesouvertes/data/EN_ODP-TR-Work-TFWP_PT_program_sign.xlsx",
-  IMP  = "https://www.ircc.canada.ca/opendata-donneesouvertes/data/EN_ODP-TR-Work-IMP_PT_program_sign.xlsx"
-)
+
 
 # The open-data catalogue page that documents both files (cited in the app).
 IRCC_METADATA_URL <- "https://open.canada.ca/data/en/dataset/360024f2-17e9-4558-bfc1-3616485d65b9"
@@ -357,74 +351,7 @@ clean_ircc_file <- function(df, program) {
     )
 }
 
-# ---- 5b. Reference: IRCC's distinct-people annual totals for Canada --------
-# Reads one IRCC Excel table and returns Canada's annual total of distinct
-# people ("<year> Total" columns in the national "Total" row). The Excel
-# layout is: title rows, then a header row with "2015 Total", "2016 Total"...
-# above the month row, then province/program rows, then a row labelled
-# exactly "Total" (Canada), then notes.
-parse_ircc_reference <- function(bytes, program) {
-  tmp <- tempfile(fileext = ".xlsx")
-  on.exit(unlink(tmp))
-  writeBin(bytes, tmp)
-  sheet <- readxl::read_excel(tmp, sheet = 1, col_names = FALSE,
-                              col_types = "text", .name_repair = "minimal")
-  m <- as.matrix(sheet)
-  m[is.na(m)] <- ""
-
-  # Columns whose header says "<year> Total" hold the annual figures.
-  hits <- which(matrix(grepl("^\\s*\\d{4} Total\\s*$", m), nrow(m)), arr.ind = TRUE)
-  if (nrow(hits) == 0) stop("[", program, " reference] no '<year> Total' columns found")
-  year_cols  <- hits[, "col"]
-  year_label <- trimws(m[hits])
-
-  # The national row is labelled exactly "Total" in one of the label columns
-  # (the columns to the left of the first data column).
-  first_data <- min(which(apply(m, 2, function(x) any(grepl("^(Jan|Q1)$", x)))))
-  label_cols <- seq_len(first_data - 1)
-  total_row <- which(apply(m[, label_cols, drop = FALSE], 1,
-                           function(x) any(trimws(x) == "Total")))
-  if (length(total_row) != 1) stop("[", program, " reference] national 'Total' row not found")
-
-  raw_vals <- trimws(m[total_row, year_cols])
-  # Notes cell: the long text starting with "Notes".
-  notes <- m[grepl("^Notes", m)]
-  source_line <- m[grepl("^Source: IRCC", m)]
-
-  tibble(
-    program = program,
-    year    = as.integer(sub(" Total", "", year_label)),
-    people  = suppressWarnings(as.numeric(gsub(",", "", raw_vals))),
-    people_raw = raw_vals
-  ) |>
-    filter(!is.na(year)) |>
-    arrange(year) |>
-    structure(notes = if (length(notes)) notes[1] else NA_character_,
-              source_line = if (length(source_line)) source_line[1] else NA_character_)
-}
-
-# Combine the two programs' references; returns NULL (with a reason) on failure.
-build_reference <- function(raw_list) {
-  out <- tryCatch({
-    parts <- lapply(names(raw_list), function(p) {
-      if (is.character(raw_list[[p]])) stop(raw_list[[p]])
-      parse_ircc_reference(raw_list[[p]], p)
-    })
-    tbl <- bind_rows(parts)
-    list(table = mutate(tbl, geography = "Canada"),
-         notes = attr(parts[[1]], "notes"),
-         source_line = attr(parts[[1]], "source_line"),
-         urls = IRCC_REFERENCE_URLS, note = NULL)
-  }, error = function(e) {
-    list(table = NULL, notes = NULL, source_line = NULL,
-         urls = IRCC_REFERENCE_URLS,
-         note = paste("IRCC's reference count of distinct people is not",
-                      "available right now:", conditionMessage(e)))
-  })
-  out
-}
-
-# ---- 5c. Check new data against the verified baseline copy ------------------
+# ---- 5b. Check new data against the verified baseline copy ------------------
 # A damaged download can keep the right columns and row count but carry wrong
 # numbers, which no layout check can see. So the new table is compared with
 # a verified copy (data/baseline.rds) for "settled" months: months at least
@@ -480,9 +407,6 @@ check_against_baseline <- function(data, baseline, settle_months = 12,
 #'
 #' @param sources     Named vector c(TFWP = ..., IMP = ...) of URLs or local
 #'                    paths for the two core CSV files.
-#' @param reference_sources Named vector c(TFWP = ..., IMP = ...) of URLs or
-#'                    local paths for IRCC's Excel tables (reference only).
-#'                    Use NULL to skip the reference.
 #' @param cache_path  Where to save / read the offline copy.
 #' @param baseline_path Verified copy (never written) used to check new data
 #'                    and as the last fallback. NULL skips the check.
@@ -494,10 +418,8 @@ check_against_baseline <- function(data, baseline, settle_months = 12,
 #' @param write_cache Save the result to cache_path. Defaults to TRUE for a
 #'                    live read and FALSE for local test files.
 #' @return list(data = tidy tibble, detail = cell-level tibble,
-#'              reference = IRCC distinct-people reference (or NULL table),
 #'              meta = metadata list)
 load_data <- function(sources = IRCC_URLS,
-                      reference_sources = IRCC_REFERENCE_URLS,
                       cache_path = file.path("data", "cache.rds"),
                       baseline_path = NULL,
                       timeout = 60,
@@ -509,10 +431,8 @@ load_data <- function(sources = IRCC_URLS,
   is_url <- all(grepl("^https?://", sources))
   if (is.null(write_cache)) write_cache <- is_url
 
-  # 6a. Fetch everything at once (core CSVs + reference Excel files).
-  all_srcs <- c(sources, if (!is.null(reference_sources))
-    setNames(reference_sources, paste0("ref_", names(reference_sources))))
-  raw <- fetch_many(all_srcs, timeout = timeout, tries = tries)
+  # 6a. Fetch both CSV files at once.
+  raw <- fetch_many(sources, timeout = timeout, tries = tries)
 
   result <- tryCatch({
     core_raw <- raw[names(sources)]
@@ -595,20 +515,6 @@ load_data <- function(sources = IRCC_URLS,
       check_against_baseline(data, readRDS(baseline_path)$data)
     } else NULL
 
-    # 6i. Reference (optional): failure here never stops the dashboard.
-    reference <- if (is.null(reference_sources)) {
-      list(table = NULL, note = "Reference not requested.")
-    } else {
-      ref_raw <- raw[paste0("ref_", names(reference_sources))]
-      names(ref_raw) <- names(reference_sources)
-      build_reference(ref_raw)
-    }
-    # Keep the reference to years covered by the core data (Canada only).
-    if (!is.null(reference$table)) {
-      reference$table <- filter(reference$table,
-                                year %in% unique(data$year), geography == "Canada")
-    }
-
     # 6j. Metadata describing what was read.
     now_pt <- lubridate::with_tz(retrieved_at %||% Sys.time(), "America/Vancouver")
     meta <- list(
@@ -619,7 +525,6 @@ load_data <- function(sources = IRCC_URLS,
       first_month    = min(data$month),
       latest_month   = max(data$month),
       urls           = IRCC_URLS,
-      reference_urls = IRCC_REFERENCE_URLS,
       sources_read   = sources,
       metadata_url   = IRCC_METADATA_URL,
       files = lapply(parsed, function(x) x[c("encoding", "delimiter",
@@ -633,7 +538,7 @@ load_data <- function(sources = IRCC_URLS,
       warning        = NULL,         # set when the cache is used
       cache_note     = NULL
     )
-    list(data = data, detail = detail, reference = reference, meta = meta)
+    list(data = data, detail = detail, meta = meta)
   }, error = function(e) e)
 
   # 6k. Success: save the cache (live reads only, by default) and return.
@@ -677,6 +582,37 @@ load_data <- function(sources = IRCC_URLS,
     fmt_datetime(cached$meta$retrieved_at))   # Windows-safe helper (R/calc.R)
   warning(problem, call. = FALSE)       # also visible in the R console/logs
   cached
+}
+
+# ---- 6b. The frozen release shown by default ---------------------------------
+# IRCC's release date for the shipped files. Verified on October 18, 2026:
+# both CSVs carry the HTTP "Last-Modified" date
+# Tue, 15 Sep 2026 11:30 GMT, and the Open Government catalogue record lists
+# date_modified 2026-09-15. The files were downloaded on October 16, 2026 and
+# were byte-identical to the files IRCC served on October 18, 2026.
+# Update this (with tools/build_cache_and_profile.R) when the baseline is refreshed.
+RELEASE_INFO <- list(
+  date        = as.Date("2026-09-15"),
+  evidence    = paste("IRCC file 'Last-Modified' date (15 Sep 2026) and the Open Government",
+                      "catalogue's date modified (2026-09-15), checked October 18, 2026"),
+  downloaded  = as.POSIXct("2026-10-16 16:50:00", tz = "America/Vancouver")
+)
+
+#' Open the frozen, verified release (the dashboard's default data source).
+#' @param path the verified copy (data/baseline.rds)
+#' @param release list with the release `date` and `downloaded` time
+#' @return the same structure as load_data(), with meta$source = "release"
+#'   and a plain label such as "IRCC open data release of September 15, 2026".
+load_release <- function(path = file.path("data", "baseline.rds"), release = RELEASE_INFO) {
+  if (!file.exists(path)) stop("The saved IRCC release was not found at ", path, ".", call. = FALSE)
+  b <- readRDS(path)
+  b$meta$source          <- "release"
+  b$meta$release_date    <- release$date
+  b$meta$retrieved_at    <- release$downloaded
+  b$meta$source_label    <- sprintf("IRCC open data release of %s", fmt_date(release$date))
+  b$meta$release_evidence <- release$evidence
+  b$meta$warning <- NULL; b$meta$cache_note <- NULL
+  b
 }
 
 # `%||%` (use the right-hand value when the left is NULL); base R >= 4.4 has

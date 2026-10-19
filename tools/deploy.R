@@ -27,9 +27,11 @@ if (!nzchar(account) || !nzchar(token) || !nzchar(secret)) {
 rsconnect::setAccountInfo(name = account, token = token, secret = secret)
 
 # ---- 3. Deploy only the files the app needs ----------------------------------
-# The IRCC files are NOT uploaded: the app downloads them live at startup and
-# uses data/cache.rds only if the download fails or does not pass its checks.
-# data/baseline.rds is the verified copy new downloads are checked against.
+# The raw IRCC files are NOT uploaded. By default the app shows the saved IRCC
+# release (data/baseline.rds); with TW_DATA_SOURCE=live it downloads the files at
+# startup and uses data/cache.rds only if the download fails or fails its checks.
+# data/baseline.rds is the dated IRCC release the app shows by default, and the
+# verified copy that live downloads (TW_DATA_SOURCE=live) are checked against.
 app_files <- c("app.R",
                list.files("R", pattern = "\\.R$", full.names = TRUE),
                "www/styles.css",

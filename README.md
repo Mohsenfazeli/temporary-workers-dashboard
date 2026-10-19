@@ -13,31 +13,36 @@ An interactive dashboard of temporary work permits by province/territory and pro
 3. Start the app: `shiny::runApp()` (if the shiny package isn't installed yet, run `install.packages("shiny")` first). A browser tab opens. On first run every script installs any missing packages itself from CRAN as ready-made binaries, so no compiler (e.g. Rtools on Windows) is needed.
 4. Optional, only if you want the exact package versions used to build it: `install.packages("renv"); renv::restore()`. This can take much longer, and on Windows it may need Rtools if an exact version is only available as source code.
 
-The IRCC data download automatically at startup. If the IRCC website can't be reached, IRCC changes its file layout, or a download does not match the verified copy (`data/baseline.rds`) for months older than 12 months, the app uses the saved copy in `data/cache.rds` and says so in the header. The cache is only overwritten by a download that passes every check.
+By default the app shows a fixed IRCC release: the two IRCC files as published on September 15, 2026 (January 2015 to July 2026), saved in `data/baseline.rds`. The header says "Data: IRCC open data release of September 15, 2026". The date is IRCC's own: the files' Last-Modified date on the IRCC server and the "date modified" in the Open Government catalogue, both checked on October 18, 2026. Every visitor sees the same numbers, so the figures match the written notes.
+
+Live refresh is an option for maintainers: start the app with `TW_DATA_SOURCE=live` and it downloads the IRCC files at startup. If the IRCC website can't be reached, IRCC changes its file layout, or a download does not match the verified copy for months older than 12 months, the app uses the saved copy in `data/cache.rds` and says so in the header. The cache is only overwritten by a download that passes every check.
 
 ## Data
-Main data, read live at startup (Open Government Licence – Canada):
+Main data (Open Government Licence – Canada; saved as the September 15, 2026 release, or read live with `TW_DATA_SOURCE=live`):
 - https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-TFWP-PT_program.csv
 - https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-IMP-PT_program.csv
 
-Supplementary reference only: IRCC Excel tables (`EN_ODP-TR-Work-TFWP_PT_program_sign.xlsx` and the IMP equivalent, on www.ircc.canada.ca). They give Canada's annual counts of distinct people. They are off by default: shown on the Trends tab only if the reader ticks "Show IRCC's own annual count", and in a table in About. Every figure in the dashboard comes from the two CSVs.
+No other data source is used: every figure in the dashboard comes from these two IRCC CSV files.
 
 How the data are handled:
 - The date range, year list and latest month are taken from the data, so a new IRCC month appears without code changes.
 - Values IRCC suppresses for privacy ("--", 0–5) count as 0 and are flagged; figures where they could add more than 10% are marked "Possible undercount".
+- Counts are permits that took effect, not people or new arrivals; they include permits for people already in Canada (extensions and changes of status), so they can rise while arrivals fall (IRCC, Supplementary Information for the 2026–2028 Immigration Levels Plan).
+- Dotted lines on the Trends charts mark six dated policy events, each linked to its official Government of Canada source. They are context only and do not imply cause.
+- "Same months each year" (Annual view) compares January to July of every year with 2026.
 
 ## Structure
 - `app.R`: page layout, global sidebar controls, header status bar; loads the data once at startup.
-- `R/data.R`: `load_data()` (live read, checks, tidy table, cache fallback, Excel reference).
+- `R/data.R`: `load_release()` (default: the dated IRCC release) and `load_data()` (live read, checks, tidy table, cache fallback).
 - `R/calc.R`: calculation and formatting functions, all tested.
 - `R/theme.R`: colours (colour-blind safe), chart styling, source lines.
 - `R/mod_*.R`: one module per tab (Overview, Trends, Geography, Composition, Data, About).
 - `www/styles.css`: government-style visual tweaks.
 - `data/cache.rds`: offline fallback (IRCC data as downloaded on October 16, 2026; replaced on the server only by a download that passes every check).
-- `data/baseline.rds`: verified copy of the same data, never overwritten. Each new download is compared with it for settled months (at least 12 months before its latest month); if more than 2% of cells or any full-year Canada program total (more than 1%) differ, the download is treated as damaged. Refresh it with `tools/build_cache_and_profile.R` when you redeploy with newer verified files.
+- `data/baseline.rds`: the IRCC release of September 15, 2026 that the app shows by default (date in `RELEASE_INFO`, `R/data.R`); never overwritten. Each new download is compared with it for settled months (at least 12 months before its latest month); if more than 2% of cells or any full-year Canada program total (more than 1%) differ, the download is treated as damaged. Refresh it with `tools/build_cache_and_profile.R` when you redeploy with a newer verified release, and update `RELEASE_INFO` to IRCC's date for that release.
 - `data_profile.md`: data profile, checks and assumptions.
 - `tests/`: testthat and shinytest2 tests.
-- `tools/get_testdata.R`: downloads the four IRCC files into `testdata/` for the tests.
+- `tools/get_testdata.R`: downloads the two IRCC CSV files into `testdata/` for the tests.
 - `tools/build_cache_and_profile.R`: rebuilds `data/cache.rds` from local copies of the IRCC files in `raw_profile/` (not included; download them first).
 - `tools/deploy.R`: publishes to shinyapps.io using the `SHINYAPPS_ACCOUNT`, `SHINYAPPS_TOKEN` and `SHINYAPPS_SECRET` environment variables.
 - `renv.lock`: exact package versions.
@@ -53,6 +58,7 @@ NOT_CRAN=true Rscript tests/testthat.R
 - `tests/testthat.R` exits with status 1 if any test fails or stops with an error; `Rscript tools/windows_check.R` runs everything and prints ALL CHECKS PASSED only when there are 0 failures and 0 errors.
 
 ## Optional settings (environment variables)
-- `TW_LOCAL_DIR`: read local copies of the four IRCC files instead of the URLs (same code path).
+- `TW_DATA_SOURCE`: `live` downloads the IRCC files at startup instead of showing the saved release (default).
+- `TW_LOCAL_DIR`: read local copies of the two IRCC CSV files instead of the URLs (same code path as live).
 - `TW_TIMEOUT`: download timeout in seconds per file once the server has answered (default 60). Before downloading, the app checks in parallel that each IRCC server answers (6-second connect limit), so an unreachable site falls back to the cache in about 6 seconds.
 - `TW_TRIES`: download attempts (default 2).

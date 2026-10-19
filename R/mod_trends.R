@@ -1,6 +1,6 @@
 # =============================================================================
 # R/mod_trends.R: Trends tab (trend by program, year-over-year change,
-# neutral notes for key events, IRCC distinct-people reference)
+# neutral notes for key events)
 # =============================================================================
 required_packages <- c("shiny", "bslib", "plotly")
 missing_packages  <- required_packages[
@@ -12,31 +12,16 @@ if (length(missing_packages) > 0) {
 trends_ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tagList(
-    chart_card(ns, "trend", height = "400px",
-               footer = htmltools::tagList(
-                 # The IRCC Excel reference is OFF by default: the dashboard's
-                 # figures all come from the two CSVs named in the assignment.
-                 shiny::checkboxInput(ns("show_ref"),
-                   "Show IRCC's own annual count of distinct people (supplementary reference; not one of the two assignment data files)",
-                   value = FALSE, width = "100%"),
-                 shiny::uiOutput(ns("reference_note")))),
+    chart_card(ns, "trend", height = "400px"),
     chart_card(ns, "yoy", height = "360px")
   )
 }
 
-trends_server <- function(id, sel, data, meta, reference) {
+trends_server <- function(id, sel, data, meta) {
   shiny::moduleServer(id, function(input, output, session) {
 
     sel_df <- shiny::reactive({
-      s <- sel(); filter_selection(data, s$start, s$end, s$geography, s$programs)
-    })
-
-    # Should the IRCC distinct-people reference be drawn? Only for Canada,
-    # only in the annual view, and only if the reference was read.
-    show_ref <- shiny::reactive({
-      s <- sel()
-      isTRUE(input$show_ref) && s$geography == "Canada" && s$resolution == "Annual" &&
-        !is.null(reference$table)
+      s <- sel(); filter_selection(data, s$start, s$end, s$geography, s$programs, s$last_moy)
     })
 
     output$trend_title <- shiny::renderText({
@@ -89,27 +74,6 @@ trends_server <- function(id, sel, data, meta, reference) {
                         symbol = ifelse(d$partial, "circle-open", "circle")),
           text = ~hover, hoverinfo = "text")
       }
-      # IRCC distinct-people reference (Canada, annual view only).
-      if (show_ref()) {
-        ref <- reference$table
-        ser_years <- unique(ser[c("period", "label", "partial")])
-        ser_years$year <- as.integer(format(ser_years$period, "%Y"))
-        ref <- merge(ref, ser_years, by = "year")
-        # Only full years (and the YTD year, whose reference is also Jan-latest month)
-        ref <- ref[!ref$partial | grepl("YTD", ref$label), ]
-        for (pr in intersect(c("TFWP", "IMP"), s$programs)) {
-          r <- ref[ref$program == pr, ]
-          r <- r[order(r$year), ]
-          if (nrow(r) == 0) next
-          r$hover <- sprintf("%s reference: %s distinct people (IRCC Excel table)", pr, fmt_n(r$people))
-          p <- p |> plotly::add_trace(
-            data = r, x = ~label, y = ~people, type = "scatter", mode = "markers",
-            name = paste(pr, "\u2013 IRCC count of distinct people (reference)"),
-            marker = list(color = PROGRAM_COLOURS[[pr]], symbol = "diamond-open",
-                          size = 11, line = list(width = 2)),
-            text = ~hover, hoverinfo = "text")
-        }
-      }
       p <- style_plot(p,
         if (s$resolution == "Monthly") "Month the permit took effect"
         else "Year the permit took effect",
@@ -117,11 +81,10 @@ trends_server <- function(id, sel, data, meta, reference) {
         else "Work permits (number per year)",
         x_type = if (s$resolution == "Monthly") "date" else "category") |>
         # Legend above the chart (never collides with long year labels) and
-        # 25% headroom at the top so the event notes never sit on a line.
+        # headroom at the top (50% monthly, 35% annual) so the event notes never sit on a line.
         plotly::layout(legend = list(orientation = "h", x = 0, y = 1.02, yanchor = "bottom"),
                        margin = list(t = 70, b = 70),
-                       yaxis = list(range = c(0, 1.25 * max(c(ser$value,
-                         if (show_ref()) reference$table$people), na.rm = TRUE))))
+                       yaxis = list(range = c(0, (if (s$resolution == "Monthly") 1.5 else 1.35) * max(ser$value, na.rm = TRUE))))
       # Neutral event notes (only those inside the selected period).
       ev <- KEY_EVENTS[KEY_EVENTS$date >= s$start & KEY_EVENTS$date <= s$end, ]
       # Width of the chart in the browser (pixels). On a narrow screen the
@@ -147,9 +110,9 @@ trends_server <- function(id, sel, data, meta, reference) {
             type = "line", x0 = xs[i], x1 = xs[i], yref = "paper", y0 = 0, y1 = 1,
             line = list(color = "#777777", dash = "dot", width = 1))),
           annotations = if (narrow) list() else lapply(seq_len(nrow(ev)), function(i) list(
-            # Monthly: alternate heights so close notes don't overlap; Annual:
-            # one line per year, so all notes sit at the top (above the headroom)
-            x = xs[i], y = if (s$resolution == "Monthly") 1 - 0.07 * ((i - 1) %% 2) else 1,
+            # One height per note (stepping down from the top, inside the
+            # headroom), because several 2024-2025 events are close together
+            x = xs[i], y = 1 - (if (s$resolution == "Monthly") 0.055 else 0.065) * (i - 1),
             yref = "paper",
             text = ev$short[i], showarrow = FALSE,
             xanchor = "right", yanchor = "top", xshift = -3,
@@ -162,32 +125,18 @@ trends_server <- function(id, sel, data, meta, reference) {
     output$trend_source <- shiny::renderUI({
       s <- sel()
       ev <- KEY_EVENTS[KEY_EVENTS$date >= s$start & KEY_EVENTS$date <= s$end, ]
-      source_line(meta, reference = show_ref(),
+      source_line(meta,
         extra = htmltools::tagList(
-          if (s$resolution == "Annual") "Open circles are part-years. ",
+          if (!is.null(s$last_moy)) sprintf("Same months (Jan\u2013%s) of every year. ", month.abb[s$last_moy])
+          else if (s$resolution == "Annual") "Open circles are part-years. ",
           event_notes_html(ev)))
     })
-    output$reference_note <- shiny::renderUI({
-      s <- sel()
-      if (!isTRUE(input$show_ref)) {
-        NULL    # reference switched off (the default): nothing extra to explain
-      } else if (s$geography != "Canada" || s$resolution != "Annual") {
-        htmltools::tags$p(class = "source-line",
-          "The IRCC reference exists only for Canada as a whole, by year: choose Canada and the Annual view.")
-      } else if (is.null(reference$table)) {
-        htmltools::tags$p(class = "source-line",
-          "IRCC's reference count of distinct people is not available right now, so it is not shown.")
-      } else {
-        htmltools::tags$p(class = "source-line",
-          htmltools::tags$strong("Reading the diamonds: "),
-          "lines count work permits that took effect (sum of months, from the two IRCC CSVs). Diamonds show IRCC's own annual count of distinct people for Canada, from IRCC's Excel version of the same tables (a supplementary source, shown only on request). It is 1\u20133% lower because a person with permits in two different months is counted once. See About the data.")
-      }
-    })
-
     # ---- Year-over-year change ----
     yoy <- shiny::reactive({
       s <- sel()
       full <- data |> dplyr::filter(geography == s$geography, program %in% s$programs)
+      # Same months each year: compare e.g. Jan-Jul with Jan-Jul a year earlier
+      if (!is.null(s$last_moy)) full <- full[as.integer(format(full$month, "%m")) <= s$last_moy, ]
       # With both programs, add their combined total as a third series
       # ("Total"), consistent with the trend chart above.
       if (length(s$programs) == 2) full <- dplyr::bind_rows(full, dplyr::mutate(full, program = "Total"))
@@ -228,6 +177,6 @@ trends_server <- function(id, sel, data, meta, reference) {
       p
     })
     output$yoy_source <- shiny::renderUI(source_line(meta,
-      extra = "Part-years (including 2026 year-to-date) are compared with the same months of the previous year."))
+      extra = "Part-years are compared with the same months a year earlier."))
   })
 }

@@ -2,7 +2,7 @@
 # renders every output without errors or warnings, and the slider and the
 # monthly/annual toggle change every chart.
 skip_if_not(have_testdata, "Local IRCC test files not found in testdata/ (run Rscript tools/get_testdata.R first)")
-d <- BUNDLE$data; meta <- BUNDLE$meta; ref <- BUNDLE$reference
+d <- BUNDLE$data; meta <- BUNDLE$meta
 first <- min(d$month); latest <- meta$latest_month
 
 make_sel <- function(geo = "Canada", prog = "Both", res = "Annual",
@@ -15,18 +15,19 @@ make_sel <- function(geo = "Canada", prog = "Both", res = "Annual",
 OUTPUTS <- list(
   overview = c("kpi_total", "kpi_split", "kpi_latest", "kpi_change", "headline_title",
                "headline_plot", "takeaways", "kpi_total_sub", "kpi_latest_sub", "kpi_change_sub",
-               "kpi_split_title", "kpi_split_sub", "kpi_change_title"),
-  trends = c("trend_title", "trend_plot", "yoy_title", "yoy_plot", "reference_note", "trend_source"),
+               "kpi_split_title", "kpi_split_sub", "kpi_change_title",
+               "kpi_year", "kpi_year_title", "kpi_year_sub", "highlights"),
+  trends = c("trend_title", "trend_plot", "yoy_title", "yoy_plot", "trend_source"),
   geography = c("rank_title", "rank_plot", "rank_table", "compare_title", "compare_plot"),
   composition = c("share_tfwp_title", "share_tfwp_plot", "share_imp_title", "share_imp_plot",
-                  "mix_title", "mix_plot", "unknown_note"),
+                  "mix_title", "mix_plot", "unknown_note", "detail_title", "detail_table"),
   data = c("title", "table")
 )
 SERVERS <- list(
   overview = function(sel) overview_server("x", sel, d, meta),
-  trends = function(sel) trends_server("x", sel, d, meta, ref),
+  trends = function(sel) trends_server("x", sel, d, meta),
   geography = function(sel) geography_server("x", sel, d, meta),
-  composition = function(sel) composition_server("x", sel, d, meta),
+  composition = function(sel) composition_server("x", sel, d, meta, BUNDLE$detail),
   data = function(sel) data_server("x", sel, d, meta)
 )
 
@@ -105,25 +106,14 @@ test_that("the monthly/annual toggle changes every chart that has a time axis", 
   }
 })
 
-test_that("the IRCC reference appears only for Canada in the annual view, and hides gracefully", {
-  has_ref <- function(s, r = ref, show = TRUE) {
-    sel <- shiny::reactiveVal(s); res <- NULL
-    shiny::testServer(function(input, output, session) trends_server("x", sel, d, meta, r), {
-      session$setInputs(`x-show_ref` = show)   # the "Show IRCC reference" tick box
-      res <<- grepl("distinct people \\(reference\\)", output$`x-trend_plot`)
-      attr(res, "note") <<- as.character(output$`x-reference_note`$html)
-    })
-    res
-  }
-  # Off by default (the tick box starts unticked): only the two CSVs are shown
-  expect_false(has_ref(make_sel("Canada", "Both", "Annual"), show = FALSE))
-  expect_true(has_ref(make_sel("Canada", "Both", "Annual")))
-  expect_false(has_ref(make_sel("Canada", "Both", "Monthly")))
-  expect_false(has_ref(make_sel("Ontario", "Both", "Annual")))
-  no_ref <- list(table = NULL, note = "not available")
-  r <- has_ref(make_sel("Canada", "Both", "Annual"), no_ref)
-  expect_false(r)
-  expect_match(attr(r, "note"), "not available right now")
+test_that("the Trends tab shows only data from the two IRCC CSV files", {
+  sel <- shiny::reactiveVal(make_sel("Canada", "Both", "Annual"))
+  shiny::testServer(function(input, output, session) trends_server("x", sel, d, meta), {
+    expect_no_match(output$`x-trend_plot`, "distinct people|diamond|Excel", ignore.case = TRUE)
+    expect_no_match(paste(format(output$`x-trend_source`), collapse = ""), "xlsx|Excel", ignore.case = TRUE)
+  })
+  ui <- as.character(htmltools::renderTags(trends_ui("t"))$html)
+  expect_no_match(ui, "show_ref|distinct people", ignore.case = TRUE)
 })
 
 test_that("the split card follows the program filter", {
@@ -134,7 +124,7 @@ test_that("the split card follows the program filter", {
   sp <- kpi_split(d, "2015-01-01", meta$latest_month, "Canada")
   expect_match(tf$kpi_split, fmt_share(sp$share[sp$program == "TFWP"], 0), fixed = TRUE)
   expect_no_match(tf$kpi_split_sub, "IMP [0-9]")
-  expect_match(tf$kpi_change_title, "Change: Last 12 months vs first 12 months")
+  expect_match(tf$kpi_change_title, "Jan\u2013Jul 2026 vs Jan\u2013Jul 2025", fixed = TRUE)
 })
 
 test_that("the composition mix can be shown as numbers, and the glossary is shown", {
@@ -180,7 +170,7 @@ test_that("the 'Reading the IMP mix' note follows the selected geography", {
 
 test_that("About states the data rules, the IMP subset caveat, event sources and a glossary", {
   ab <- NULL
-  shiny::testServer(function(input, output, session) about_server("x", d, meta, ref), {
+  shiny::testServer(function(input, output, session) about_server("x", d, meta), {
     ab <<- paste(format(output[["x-about"]]), collapse = "")
   })
   expect_match(ab, "two")                                       # two assignment CSV files
@@ -201,7 +191,7 @@ test_that("external feedback: YoY shows both programs, merged event label, table
   tr <- render_all("trends", make_sel("Canada", "Both", "Annual"))
   expect_match(tr$yoy_plot, "Both programs", fixed = TRUE)
   expect_match(tr$yoy_title, "both programs (up|down)")
-  expect_match(tr$trend_plot, "2024: temp. resident target & TFWP limits", fixed = TRUE)
+  expect_match(tr$trend_plot, "2024: study cap & TR target & TFWP limits & PGWP rules", fixed = TRUE)
   tf <- render_all("trends", make_sel("Canada", "TFWP", "Annual"))
   expect_no_match(tf$yoy_plot, "Both programs", fixed = TRUE)
   geo <- render_all("geography", make_sel("Canada", "Both", "Annual"))
@@ -209,6 +199,6 @@ test_that("external feedback: YoY shows both programs, merged event label, table
   expect_match(geo$rank_table, "Note*", fixed = TRUE)
   expect_no_match(geo$rank_table, "<caption", fixed = TRUE)          # no duplicate Growth note
   ov <- render_all("overview", make_sel("Canada", "Both", "Monthly"))
-  num <- sub("^\\+", "", ov$kpi_change)                              # e.g. "264.7%"
-  expect_match(ov$headline_title, num, fixed = TRUE)                  # same number, same precision
+  num <- sub("^\\+", "", ov$kpi_change)                              # e.g. "45.8%"
+  expect_match(ov$takeaways, num, fixed = TRUE)                       # same number, same precision
 })

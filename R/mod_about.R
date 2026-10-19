@@ -1,6 +1,6 @@
 # =============================================================================
 # R/mod_about.R: About the data (plain-language explanation, assumptions,
-# sources, how-to-use guide, IRCC distinct-people reference table)
+# sources, how-to-use guide)
 # =============================================================================
 required_packages <- c("shiny", "bslib", "htmltools")
 missing_packages  <- required_packages[
@@ -46,7 +46,7 @@ GLOSSARY <- data.frame(
     "A permit not tied to one employer (e.g. post-graduation, spouses, bridging permits).",
     "IMP permits justified by a significant benefit to Canada, e.g. intra-company transfers and bridging permits for people applying for permanent residence.",
     "Canada\u2013United States\u2013Mexico Agreement (formerly NAFTA); trade agreements let some professionals work without an LMIA.",
-    "IMP permits that IRCC records as \"Unknown International Mobility Program\"; their number rose sharply after 2021."),
+    "IMP permits for which IRCC does not identify the program (\"Unknown International Mobility Program\")."),
   stringsAsFactors = FALSE
 )
 
@@ -61,33 +61,10 @@ about_ui <- function(id) {
   shiny::uiOutput(ns("about"))
 }
 
-about_server <- function(id, data, meta, reference) {
+about_server <- function(id, data, meta) {
   shiny::moduleServer(id, function(input, output, session) {
     output$about <- shiny::renderUI({
       tags <- htmltools::tags
-      ref_tbl <- NULL
-      if (!is.null(reference$table)) {
-        csv <- data |> dplyr::filter(geography == "Canada") |>
-          dplyr::group_by(program, year) |>
-          dplyr::summarise(sum_months = sum(value), .groups = "drop")
-        r <- merge(reference$table, csv, by = c("program", "year"))
-        r <- r[order(r$program == "IMP", r$year), ]
-        latest_y <- as.integer(format(meta$latest_month, "%Y"))
-        r$Year <- ifelse(r$year == latest_y & as.integer(format(meta$latest_month, "%m")) < 12,
-                         paste0(r$year, " YTD (Jan\u2013", month.abb[as.integer(format(meta$latest_month, "%m"))], ")"),
-                         as.character(r$year))
-        ref_tbl <- tags$table(class = "table table-sm ref-table",
-          tags$caption("IRCC reference: Canada, permits that took effect (sum of months, used in this dashboard) vs IRCC's annual count of distinct people"),
-          tags$thead(tags$tr(tags$th("Program"), tags$th("Year"),
-                             tags$th(class = "text-end", "Sum of months (dashboard)"),
-                             tags$th(class = "text-end", "IRCC distinct people"),
-                             tags$th(class = "text-end", "Difference"))),
-          tags$tbody(lapply(seq_len(nrow(r)), function(i) tags$tr(
-            tags$td(r$program[i]), tags$td(r$Year[i]),
-            tags$td(class = "text-end", fmt_n(r$sum_months[i])),
-            tags$td(class = "text-end", fmt_n(r$people[i])),
-            tags$td(class = "text-end", fmt_pct(pct_change(r$people[i], r$sum_months[i])))))))
-      }
       latest_tx <- fmt_month(meta$latest_month)
       first_tx  <- fmt_month(meta$first_month)
 
@@ -99,7 +76,13 @@ about_server <- function(id, data, meta, reference) {
             tags$p("This dashboard shows how many temporary foreign workers had a Canadian work permit take effect each month, by province or territory and by program."),
             tags$div(class = "alert alert-light border py-2 px-3 small",
               tags$strong("Data used: "), "every figure comes from the two IRCC open data files (CSV) for TFWP and IMP listed under Sources. ",
-              "An optional IRCC reference (Canada's annual count of distinct people) can be switched on in the Trends tab; it is off by default and is not used in any calculation."),
+              if (identical(meta$source, "release")) htmltools::tagList(
+                "The dashboard shows a fixed copy of the ", tags$strong(meta$source_label),
+                " (data to ", fmt_month(meta$latest_month), "), downloaded ", fmt_date(meta$retrieved_at),
+                ". The release date is from ", meta$release_evidence, ". ",
+                "A fixed release means every visitor sees the same, checked numbers. ",
+                "Maintainers can switch to a live read of IRCC's files (environment variable TW_DATA_SOURCE = live); a live download is used only if it matches this release for months more than a year old. "),
+              "No other data source is used."),
             tags$h3("The two programs"),
             tags$ul(
               tags$li(tags$strong("Temporary Foreign Worker Program (TFWP): "),
@@ -118,16 +101,28 @@ about_server <- function(id, data, meta, reference) {
             tags$ul(
               tags$li("Period: ", first_tx, " to ", latest_tx, " (latest month available)."),
               tags$li("Geography: Canada, the 10 provinces and 3 territories. Canada also includes permits with no province or territory stated; that group is not ranked."),
-              tags$li("Data last retrieved: ", fmt_datetime(meta$retrieved_at),
-                      " (", meta$source_label, "). IRCC updates the files monthly; the dashboard reads them live each time it starts."),
+              if (identical(meta$source, "release"))
+                tags$li("Data: ", meta$source_label, ", downloaded ", fmt_datetime(meta$retrieved_at),
+                        ". IRCC updates the files monthly; this copy is refreshed when the dashboard is redeployed.")
+              else tags$li("Data last retrieved: ", fmt_datetime(meta$retrieved_at),
+                      " (", meta$source_label, "). IRCC updates the files monthly."),
               tags$li("IRCC describes these data as preliminary estimates that are subject to change; past months can be revised in later releases."),
               if (identical(meta$source, "cache")) tags$li(tags$strong("Currently showing saved data: "), meta$warning)),
             tags$h3("Privacy masking and rounding"),
             tags$p("IRCC shows values between 0 and 5 as \"--\" and rounds all other values to the nearest 5 to protect privacy. ",
-                   "In this dashboard a \"--\" cell is counted as 0, so totals can be slightly low (at most 5 per masked cell; about 0.5% of national monthly totals). Small places and categories, such as the territories, are affected most. Because of rounding, parts may not add up exactly to totals."),
+                   "In this dashboard a \"--\" cell is counted as 0, so totals can be slightly low (by at most 5 per masked cell). Small places and categories, such as the territories, are affected most. Because of rounding, parts may not add up exactly to totals."),
+            tags$h3("Reading the charts"),
+            tags$ul(
+              tags$li(tags$strong("Permits, not people or arrivals. "), IN_CANADA_NOTE$text, " Source: ",
+                      tags$a(href = IN_CANADA_NOTE$url, target = "_blank", IN_CANADA_NOTE$source, .noWS = "after"), "."),
+              tags$li(tags$strong("Part-years. "), "In the annual view a year with fewer than 12 selected months is a part-year (lighter bars, open circles, labels such as \"2026 YTD (Jan\u2013Jul)\"). Year-over-year changes for a part-year compare the same months a year earlier. Tick ", tags$em("Same months each year"), " to compare, for example, January to July of every year."),
+              tags$li(tags$strong("Suppressed values. "), "IRCC shows 0 to 5 as \"--\"; these count as 0 (see Privacy masking and rounding)."),
+              tags$li(tags$strong("Event lines. "), "Dotted lines on the Trends tab mark federal policy events for context only; they do not show cause. Full wording and sources are listed under Sources."),
+              tags$li(tags$strong("Unknown IMP. "), "IRCC does not identify the program for some IMP permits (\"Unknown International Mobility Program\"). The Composition tab gives their share for the selected place and can show IMP shares of permits with a known program only."),
+              tags$li(tags$strong("Groupings. "), "TFWP streams and IMP sub-programs are grouped by the author; the Composition tab lists IRCC's own program names in each group.")),
             tags$h3("How to use"),
             tags$ol(
-              tags$li("Use the ", tags$strong("Period"), " slider to choose the months you want (January 2015 to the latest month)."),
+              tags$li("Use the ", tags$strong("Period"), " slider, or a quick-period button, to choose the months you want (January 2015 to the latest month)."),
               tags$li("Choose ", tags$strong("Monthly"), " or ", tags$strong("Annual"), ". Part-years are labelled, and 2026 is year-to-date."),
               tags$li("Pick ", tags$strong("Canada"), " or one province or territory, and TFWP, IMP or both."),
               tags$li("Every tab updates. Hover over charts for exact values; use the expand icon for full screen; download the numbers from the ", tags$strong("Data"), " tab."),
@@ -140,37 +135,29 @@ about_server <- function(id, data, meta, reference) {
             tags$h3("Assumptions"),
             tags$ol(
               tags$li("The data are a flow: permits that took effect in each month. Annual = sum of months (\"work permits that took effect during the year\"); the latest year is year-to-date and never compared with full years."),
-              tags$li("Because people can have more than one permit in a year, summed figures are permits, not distinct people. IRCC's own annual count of distinct people for Canada is available as an optional reference (see table below)."),
+              tags$li("Because people can have more than one permit in a year, summed figures are permits, not distinct people."),
               tags$li("Masked cells (\"--\", 0 to 5 in IRCC's footnote wording) count as 0 in all sums; tables show how many suppressed cells each figure includes and flag figures where they could add more than 10% (\"Possible undercount\")."),
               tags$li("A combination missing from IRCC's file means zero."),
               tags$li("Canada = the 13 provinces and territories plus \"province/territory not stated\"."),
               tags$li("TFWP and IMP are separate programs, so \"both\" = TFWP + IMP."),
               tags$li("Province/territory is the intended destination recorded on the permit, not where the person lives."),
-              tags$li("Values are used as published by IRCC on the retrieval date; IRCC's data are preliminary estimates and may be revised."),
+              tags$li("Values are used as published in the IRCC release shown in the header; IRCC's data are preliminary estimates and may be revised."),
               tags$li("IMP figures cover the subset of IMP work permit holders in IRCC's table; people primarily in Canada for other reasons (e.g. asylum claimants, humanitarian and compassionate cases) are not included."),
-              tags$li("TFWP streams and IMP sub-programs are grouped into 4 and 8 categories (mapping below). \"Unknown IMP\" is kept separate because IRCC's use of it rose after 2021."),
+              tags$li("TFWP streams and IMP sub-programs are grouped into 4 and 8 categories (mapping below). \"Unknown IMP\" is kept separate because IRCC does not identify the program for these permits."),
               tags$li("Growth over a period compares the last 12 months with the first 12 months of the selected range (or the last month with the first month if fewer than 24 months are selected)."),
-              tags$li("IRCC's Excel tables are a supplementary source used only for the optional reference of Canada's annual distinct people (off by default); every dashboard figure and calculation comes from the two CSV files.")),
-            tags$h3("Optional IRCC reference: distinct people per year (Canada)"),
-            if (is.null(ref_tbl)) tags$p(reference$note %||% "The reference is not available right now.")
-            else htmltools::tagList(
-              tags$p("IRCC's Excel tables give an annual total that counts each person once per year. It is 1\u20133% below the sum of the months used here because some people had permits take effect in more than one month. IRCC's note: ",
-                     tags$em("\u201cThe total unique count may not equal to the sum of permit holders in each program as an individual may hold more than one type of permit over a given period.\u201d")),
-              ref_tbl),
+              tags$li("Every dashboard figure and calculation comes from the two IRCC CSV files listed below; no other data are used.")),
             tags$h3("Sources"),
             tags$ul(
               tags$li("IRCC, Temporary Foreign Worker Program work permit holders by province/territory of intended destination, program and year in which permit(s) became effective (CSV): ",
                       tags$a(href = meta$urls[["TFWP"]], target = "_blank", meta$urls[["TFWP"]])),
               tags$li("IRCC, International Mobility Program work permit holders by province/territory of intended destination, program and year in which permit(s) became effective (CSV): ",
                       tags$a(href = meta$urls[["IMP"]], target = "_blank", meta$urls[["IMP"]])),
-              tags$li("Supplementary reference (Canada annual distinct people only): IRCC Excel tables ",
-                      tags$a(href = meta$reference_urls[["TFWP"]], target = "_blank", "TFWP (XLSX)"), " and ",
-                      tags$a(href = meta$reference_urls[["IMP"]], target = "_blank", "IMP (XLSX)"),
-                      if (!is.null(reference$source_line)) paste0(" (", reference$source_line, ").")),
               tags$li("Catalogue record and metadata: Open Government Portal, ",
                       tags$a(href = meta$metadata_url, target = "_blank",
                              "Temporary Residents: TFWP and IMP Work Permit Holders \u2013 Monthly IRCC Updates"),
                       ". Open Government Licence \u2013 Canada."),
+              tags$li("Note on permits and arrivals: ",
+                      tags$a(href = IN_CANADA_NOTE$url, target = "_blank", IN_CANADA_NOTE$source, .noWS = "after"), "."),
               tags$li("Event notes on the Trends tab (context only): ",
                       tags$ul(lapply(seq_len(nrow(KEY_EVENTS)), function(i) tags$li(
                         KEY_EVENTS$label[i], ". Source: ",

@@ -108,24 +108,23 @@ empty_plot <- function(message) {
 }
 
 # ---- 4. Source line under every chart ------------------------------------------
-source_line <- function(meta, extra = NULL, reference = FALSE) {
+# One short line: source, release (or retrieval) date and the one caveat that
+# applies everywhere. Chart-specific notes are one short sentence (`extra`);
+# the details are in About the data.
+data_date_text <- function(meta) {
+  if (!is.null(meta$release_date) && identical(meta$source, "release"))
+    paste0("release of ", fmt_date(meta$release_date))
+  else paste0("retrieved ", fmt_date(meta$retrieved_at))   # Windows-safe helper (R/calc.R)
+}
+source_line <- function(meta, extra = NULL) {
+  # .noWS keeps the links tight against the brackets and commas
+  a <- function(href, txt) htmltools::tags$a(href = href, target = "_blank", txt, .noWS = c("before", "after"))
   htmltools::tags$p(
     class = "source-line",
-    "Source: Immigration, Refugees and Citizenship Canada (IRCC), open data: ",
-    htmltools::tags$a(href = meta$urls[["TFWP"]], target = "_blank", "TFWP"),
-    " and ",
-    htmltools::tags$a(href = meta$urls[["IMP"]], target = "_blank", "IMP"),
-    # paste0() keeps the date and the full stop together (no stray space)
-    paste0(" work permit holders by province/territory, program and month the permit took effect; retrieved ",
-           fmt_date(meta$retrieved_at), ". "),   # Windows-safe helper (R/calc.R)
-    if (reference) htmltools::tagList(
-      "Reference: IRCC Excel tables, ",
-      htmltools::tags$a(href = meta$reference_urls[["TFWP"]], target = "_blank", "TFWP"),
-      " and ",
-      # .noWS = "after": no space between the link and the full stop
-      htmltools::tags$a(href = meta$reference_urls[["IMP"]], target = "_blank", "IMP", .noWS = "after"),
-      ". "),
-    "Values of 0\u20135 are suppressed by IRCC and counted as 0. ",
+    htmltools::HTML(paste0(
+      "Source: IRCC open data (", a(meta$urls[["TFWP"]], "TFWP"), ", ", a(meta$urls[["IMP"]], "IMP"),
+      "), ", htmltools::htmlEscape(data_date_text(meta)), ". ",
+      "Permits, not people; counts of 0\u20135 shown as 0. ")),
     extra
   )
 }
@@ -149,31 +148,58 @@ chart_card <- function(ns, id, height = "380px", footer = NULL, full_screen = TR
 # Context only: dated, worded neutrally, each with an official source.
 # `short` is drawn on the chart; `label` is the full note under the chart.
 KEY_EVENTS <- data.frame(
-  date  = as.Date(c("2020-03-01", "2024-03-01", "2024-09-01")),
-  # Very short names, used to build one label when two events share a year
-  # in the annual view (e.g. "2024: temp. resident target & TFWP limits")
-  tiny = c("COVID-19 travel limits", "temp. resident target", "TFWP limits"),
-  short = c("COVID-19 travel limits (Mar 2020)", "Temporary resident target (Mar 2024)",
-            "Low-wage TFWP limits (Sep 2024)"),
+  date  = as.Date(c("2020-03-01", "2024-01-01", "2024-03-01", "2024-09-01",
+                    "2024-11-01", "2025-01-01")),
+  # Very short names, used to build one label when events share a year in
+  # the annual view (e.g. "2024: study cap & TR target & TFWP limits & PGWP rules")
+  tiny = c("COVID-19 travel limits", "study cap", "TR target", "TFWP limits",
+           "PGWP rules", "family OWP limits"),
+  short = c("COVID-19 travel limits (Mar 2020)", "Study permit cap (Jan 2024)",
+            "Temporary resident target (Mar 2024)", "Low-wage TFWP limits (Sep 2024)",
+            "PGWP rules (Nov 2024)", "Family open work permits narrowed (Jan 2025)"),
   label = c("March 2020: federal COVID-19 travel restrictions on foreign nationals take effect (March 18)",
+            "January 2024: IRCC sets a two-year intake cap on new study permit applications (announced January 22)",
             "March 2024: federal government announces a target to lower temporary residents' share of the population",
-            "September 2024: new limits on low-wage TFWP hiring take effect (September 26)"),
+            "September 2024: new limits on low-wage TFWP hiring take effect (September 26)",
+            "November 2024: post-graduation work permit applicants need a minimum language level, and some college graduates a field of study linked to labour shortages (from November 1)",
+            "January 2025: family open work permits limited to spouses of some students and skilled workers (from January 21)"),
   source = c("Prime Minister of Canada, news release, March 16, 2020",
+             "IRCC, news release, January 22, 2024",
              "IRCC, Minister's announcement on temporary residents, March 21, 2024",
-             "ESDC, news release, August 26, 2024"),
+             "ESDC, news release, August 26, 2024",
+             "IRCC, news release, September 18, 2024",
+             "IRCC, notice, January 14, 2025"),
   url = c("https://www.pm.gc.ca/en/news/news-releases/2020/03/16/prime-minister-announces-new-actions-under-canadas-covid-19-response",
+          "https://www.canada.ca/en/immigration-refugees-citizenship/news/2024/01/canada-to-stabilize-growth-and-decrease-number-of-new-international-student-permits-issued-to-approximately-360000-for-2024.html",
           "https://www.canada.ca/en/immigration-refugees-citizenship/news/2024/03/speaking-notes-for-the-honourable-marc-miller-minister-of-immigration-refugees-and-citizenship-announcement-related-to-temporary-residents.html",
-          "https://www.canada.ca/en/employment-social-development/news/2024/08/minister-boissonnault-reducing-the-number-of-temporary-foreign-workers-in-canada.html"),
+          "https://www.canada.ca/en/employment-social-development/news/2024/08/minister-boissonnault-reducing-the-number-of-temporary-foreign-workers-in-canada.html",
+          "https://www.canada.ca/en/immigration-refugees-citizenship/news/2024/09/strengthening-temporary-residence-programs-for-sustainable-volumes.html",
+          "https://www.canada.ca/en/immigration-refugees-citizenship/news/notices/changes-open-work-permits-family-members-temporary-residents.html"),
   stringsAsFactors = FALSE
+)
+
+# Source for the note that the counts include people already in Canada:
+# IRCC's levels plan says permit extensions and in-Canada permit applications
+# are outside its new-arrival targets, and that PGWPs are treated as an
+# extension or change of status, not new arrivals (table footnotes 2 and 3).
+IN_CANADA_NOTE <- list(
+  text = paste("These are permits that took effect, not people or new arrivals. They include",
+               "permits for people already in Canada, such as extensions and changes of status",
+               "(IRCC treats post-graduation work permits this way), so the counts can rise",
+               "while new arrivals fall."),
+  source = "IRCC, Supplementary Information for the 2026\u20132028 Immigration Levels Plan, table footnotes 2 and 3",
+  url = "https://www.canada.ca/en/immigration-refugees-citizenship/corporate/immigration-system/levels/supplementary-immigration-levels-2026-2028.html"
 )
 
 # The event notes as HTML for a source line: each note linked to its source.
 event_notes_html <- function(ev) {
   if (nrow(ev) == 0) return(NULL)
-  # Built as one HTML string so no stray spaces appear around the links
+  # One short line: each short event name links to its official source; the
+  # full wording and source titles are listed in About the data.
   esc <- htmltools::htmlEscape
-  items <- sprintf('%s (<a href="%s" target="_blank">%s</a>)',
-                   esc(ev$label), esc(ev$url, attribute = TRUE), esc(ev$source))
-  htmltools::HTML(paste0("Dotted lines mark events for context only; they do not imply cause: ",
-                         paste(items, collapse = "; "), "."))
+  items <- sprintf('<a href="%s" target="_blank" title="%s">%s</a>',
+                   esc(ev$url, attribute = TRUE), esc(paste0(ev$label, ". Source: ", ev$source), attribute = TRUE),
+                   esc(ev$short))
+  htmltools::HTML(paste0("Dotted lines: events for context only; they do not imply cause (",
+                         paste(items, collapse = "; "), ")."))
 }

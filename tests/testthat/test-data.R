@@ -1,5 +1,5 @@
 # Data tests: coverage, keys, geography, aggregation, masking, layout
-# changes, the IRCC reference, and new months.
+# changes, the two-file rule, and new months.
 skip_if_not(have_testdata, "Local IRCC test files not found in testdata/ (run Rscript tools/get_testdata.R first)")
 d <- BUNDLE$data
 
@@ -69,7 +69,7 @@ test_that("Latin-1 encoding, comma delimiter, title row and footnotes are handle
   writeBin(iconv(paste(c("A title row", gsub("\t", ",", lines), "", "Note: a footnote"),
                        collapse = "\r\n"), "UTF-8", "latin1", toRaw = TRUE)[[1]], con)
   close(con)
-  b <- load_data(c(TFWP = f, IMP = LOCAL_CORE[["IMP"]]), NULL,
+  b <- load_data(c(TFWP = f, IMP = LOCAL_CORE[["IMP"]]),
                  cache_path = temp_cache(), write_cache = FALSE)
   expect_equal(b$meta$files$TFWP$encoding, "Latin-1")
   expect_equal(b$meta$files$TFWP$delimiter, "comma")
@@ -82,7 +82,7 @@ test_that("a changed column layout shows a clear warning and falls back to the c
   cache <- temp_cache()
   expect_warning(
     b <- load_data(c(TFWP = make_layout_changed_file(), IMP = LOCAL_CORE[["IMP"]]),
-                   LOCAL_REF, cache_path = cache, write_cache = FALSE),
+                   cache_path = cache, write_cache = FALSE),
     "layout has changed")
   expect_equal(b$meta$source, "cache")
   expect_equal(b$meta$problem_type, "layout")
@@ -92,7 +92,7 @@ test_that("a changed column layout shows a clear warning and falls back to the c
 
 test_that("a changed layout with no cache stops with a clear message", {
   expect_error(
-    load_data(c(TFWP = make_layout_changed_file(), IMP = LOCAL_CORE[["IMP"]]), NULL,
+    load_data(c(TFWP = make_layout_changed_file(), IMP = LOCAL_CORE[["IMP"]]),
               cache_path = tempfile(fileext = ".rds"), write_cache = FALSE),
     "layout has changed.*EN_PROVINCE_TERRITORY.*No saved copy")
 })
@@ -102,7 +102,7 @@ test_that("unexpected values in the count column are treated as a layout change"
   lines <- readLines(LOCAL_CORE[["TFWP"]], encoding = "UTF-8")
   lines[2] <- sub("\t[0-9]+$", "\tx", lines[2])
   writeLines(lines, f, useBytes = TRUE)
-  expect_warning(b <- load_data(c(TFWP = f, IMP = LOCAL_CORE[["IMP"]]), NULL,
+  expect_warning(b <- load_data(c(TFWP = f, IMP = LOCAL_CORE[["IMP"]]),
                                 cache_path = temp_cache(), write_cache = FALSE),
                  "Unexpected value")
   expect_equal(b$meta$source, "cache")
@@ -111,8 +111,7 @@ test_that("unexpected values in the count column are treated as a layout change"
 test_that("a new month in the IRCC files extends the data, slider and latest month automatically", {
   dir <- make_extra_month_dir()
   b <- load_data(c(TFWP = file.path(dir, basename(LOCAL_CORE[["TFWP"]])),
-                   IMP  = file.path(dir, basename(LOCAL_CORE[["IMP"]]))),
-                 NULL, cache_path = temp_cache(), write_cache = FALSE)
+                   IMP  = file.path(dir, basename(LOCAL_CORE[["IMP"]]))), cache_path = temp_cache(), write_cache = FALSE)
   expect_equal(b$meta$latest_month, BUNDLE$meta$latest_month %m+% months(1))
   expect_equal(length(month_choices(b$data)), length(month_choices(d)) + 1)
   ann <- summarise_series(filter_selection(b$data, "2026-01-01", b$meta$latest_month),
@@ -122,50 +121,34 @@ test_that("a new month in the IRCC files extends the data, slider and latest mon
 
 test_that("the cache is written after a successful read when requested", {
   cache <- tempfile(fileext = ".rds")
-  b <- load_data(LOCAL_CORE, LOCAL_REF, cache_path = cache, write_cache = TRUE)
+  b <- load_data(LOCAL_CORE, cache_path = cache, write_cache = TRUE)
   expect_true(file.exists(cache))
   expect_equal(readRDS(cache)$data, b$data)
   # local test reads do not touch the cache by default
   cache2 <- tempfile(fileext = ".rds")
-  load_data(LOCAL_CORE, NULL, cache_path = cache2)
+  load_data(LOCAL_CORE, cache_path = cache2)
   expect_false(file.exists(cache2))
 })
 
-# ---- IRCC distinct-people reference (Excel tables) ----
+# ---- Only the two IRCC CSV files are used ----
 
-test_that("the reference parses IRCC's annual distinct-people totals for Canada only", {
-  ref <- BUNDLE$reference
-  expect_false(is.null(ref$table))
-  expect_setequal(unique(ref$table$geography), "Canada")
-  expect_setequal(unique(ref$table$program), c("TFWP", "IMP"))
-  expect_setequal(unique(ref$table$year), unique(d$year))
-  expect_equal(ref$table$people[ref$table$program == "TFWP" & ref$table$year == 2023], 183180)
-  expect_equal(ref$table$people[ref$table$program == "IMP" & ref$table$year == 2023], 761200)
-  expect_match(ref$notes, "total unique count may not equal")
-})
-
-test_that("the reference is 1-4% below the sum of months in full years (sanity check)", {
-  ref <- BUNDLE$reference$table
-  csv <- aggregate(value ~ program + year, data = d[d$geography == "Canada", ], FUN = sum)
-  m <- merge(ref, csv, by = c("program", "year"))
-  m <- m[m$year < 2026, ]
-  gap <- m$people / m$value - 1
-  expect_true(all(gap < 0 & gap > -0.05))
-})
-
-test_that("a missing reference file hides the reference but the data still load", {
-  b <- load_data(LOCAL_CORE, c(TFWP = "nope.xlsx", IMP = "nope2.xlsx"),
-                 cache_path = temp_cache(), write_cache = FALSE)
-  expect_null(b$reference$table)
-  expect_match(b$reference$note, "not available")
-  expect_equal(b$data, d)
-  expect_equal(b$meta$source, "local file")
-})
-
-test_that("a corrupted reference file is handled gracefully", {
-  bad <- tempfile(fileext = ".xlsx"); writeLines("not an excel file", bad)
-  b <- load_data(LOCAL_CORE, c(TFWP = bad, IMP = LOCAL_REF[["IMP"]]),
-                 cache_path = temp_cache(), write_cache = FALSE)
-  expect_null(b$reference$table)
-  expect_equal(b$data, d)
+test_that("the data come only from the two IRCC CSV files named in the assignment", {
+  expect_setequal(names(formals(load_data)),
+                  c("sources", "cache_path", "baseline_path", "timeout", "tries",
+                    "source_label", "retrieved_at", "write_cache"))
+  expect_equal(unname(IRCC_URLS),
+               c("https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-TFWP-PT_program.csv",
+                 "https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-IMP-PT_program.csv"))
+  expect_false(exists("IRCC_REFERENCE_URLS"))
+  expect_setequal(names(BUNDLE), c("data", "detail", "meta"))
+  expect_null(BUNDLE$meta$reference_urls)
+  for (f in c("baseline.rds", "cache.rds")) {
+    x <- readRDS(file.path(PROJECT, "data", f))
+    expect_setequal(names(x), c("data", "detail", "meta"))
+    expect_true(all(grepl("\\.csv$", x$meta$urls)))
+  }
+  # No source file of the app reads Excel or any other data file
+  code <- unlist(lapply(c(file.path(PROJECT, "app.R"),
+                          list.files(file.path(PROJECT, "R"), full.names = TRUE)), readLines))
+  expect_false(any(grepl("readxl|read_excel|\\.xlsx|statcan|17-10-0009", code, ignore.case = TRUE)))
 })

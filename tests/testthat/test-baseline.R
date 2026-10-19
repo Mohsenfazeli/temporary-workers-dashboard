@@ -4,7 +4,7 @@
 skip_if_not(have_testdata, "IRCC test files not available")
 
 test_that("the IRCC files that match the verified copy pass the baseline check", {
-  b <- load_data(LOCAL_CORE, NULL, cache_path = temp_cache(), baseline_path = BASELINE,
+  b <- load_data(LOCAL_CORE, cache_path = temp_cache(), baseline_path = BASELINE,
                  write_cache = FALSE)
   expect_equal(b$meta$source, "local file")
   expect_equal(b$meta$baseline_check$cell_share, 0)
@@ -16,7 +16,7 @@ test_that("a damaged file with the normal layout is rejected and the saved copy 
   cache <- temp_cache()
   before <- tools::md5sum(cache)
   expect_warning(
-    b <- load_data(damaged_core(dir), NULL, cache_path = cache, baseline_path = BASELINE,
+    b <- load_data(damaged_core(dir), cache_path = cache, baseline_path = BASELINE,
                    write_cache = TRUE),
     "did not match the checked copy")
   expect_equal(b$meta$source, "cache")
@@ -33,7 +33,7 @@ test_that("a damaged file with the normal layout is rejected and the saved copy 
 
 test_that("without a cache, a damaged file falls back to the baseline copy", {
   expect_warning(
-    b <- load_data(damaged_core(make_damaged_dir()), NULL,
+    b <- load_data(damaged_core(make_damaged_dir()),
                    cache_path = tempfile(fileext = ".rds"), baseline_path = BASELINE),
     "did not match")
   expect_equal(b$meta$fallback_file, "baseline.rds")
@@ -43,7 +43,7 @@ test_that("without a cache, a damaged file falls back to the baseline copy", {
 test_that("a new month (later release) still passes the baseline check", {
   dir <- make_extra_month_dir()
   b <- load_data(c(TFWP = file.path(dir, basename(LOCAL_CORE[["TFWP"]])),
-                   IMP  = file.path(dir, basename(LOCAL_CORE[["IMP"]]))), NULL,
+                   IMP  = file.path(dir, basename(LOCAL_CORE[["IMP"]]))),
                  cache_path = temp_cache(), baseline_path = BASELINE, write_cache = FALSE)
   expect_equal(b$meta$source, "local file")
   expect_equal(b$meta$latest_month, as.Date("2026-08-01"))

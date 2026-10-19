@@ -18,14 +18,12 @@ for (f in list.files(file.path(PROJECT, "R"), pattern = "\\.R$", full.names = TR
   source(f, local = FALSE)
 }
 
-# Local copies of the IRCC files (same bytes as the live files, downloaded
+# Local copies of the two IRCC CSV files (same bytes as the live files, downloaded
 # Oct 16, 2026). Needed because the test machine cannot reach IRCC.
 TESTDATA <- file.path(PROJECT, "testdata")
 LOCAL_CORE <- c(TFWP = file.path(TESTDATA, "ODP-TR-Work-TFWP-PT_program.csv"),
                 IMP  = file.path(TESTDATA, "ODP-TR-Work-IMP-PT_program.csv"))
-LOCAL_REF  <- c(TFWP = file.path(TESTDATA, "EN_ODP-TR-Work-TFWP_PT_program_sign.xlsx"),
-                IMP  = file.path(TESTDATA, "EN_ODP-TR-Work-IMP_PT_program_sign.xlsx"))
-have_testdata <- all(file.exists(c(LOCAL_CORE, LOCAL_REF)))
+have_testdata <- all(file.exists(LOCAL_CORE))
 
 # A temporary copy of the cache, so tests never overwrite data/cache.rds.
 temp_cache <- function() {
@@ -36,7 +34,7 @@ temp_cache <- function() {
 
 # Load once from the local files and reuse in many tests.
 if (have_testdata && !exists("BUNDLE")) {
-  BUNDLE <- load_data(LOCAL_CORE, LOCAL_REF, cache_path = temp_cache(),
+  BUNDLE <- load_data(LOCAL_CORE, cache_path = temp_cache(),
                       write_cache = FALSE)
 }
 
@@ -51,7 +49,6 @@ make_extra_month_dir <- function() {
     aug <- sub("^2026\tQ3\tJul\t2026\tT3\tjuil\\.", "2026\tQ3\tAug\t2026\tT3\tao\u00fbt", jul)
     writeLines(c(lines, aug), file.path(dir, basename(LOCAL_CORE[[p]])), useBytes = TRUE)
   }
-  file.copy(LOCAL_REF, dir)
   dir
 }
 
@@ -80,7 +77,7 @@ BASELINE <- file.path(PROJECT, "data", "baseline.rds")
 make_damaged_dir <- function() {
   dir <- file.path(tempdir(), paste0("damaged_", as.integer(runif(1, 1, 1e6))))
   dir.create(dir)
-  file.copy(c(LOCAL_CORE[["TFWP"]], LOCAL_REF), dir)
+  file.copy(LOCAL_CORE[["TFWP"]], dir)
   lines <- readLines(LOCAL_CORE[["IMP"]], encoding = "UTF-8")
   num <- grep("\t[0-9]+\r?$", lines)
   hit <- num[seq(1, length(num), by = 2)]

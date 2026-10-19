@@ -44,3 +44,13 @@ a:focus, button:focus, input:focus, .irs:focus-within { outline: 3px solid #FCBA
 table.rank-table th, table.rank-table td { padding: 4px 6px !important; }
 /* Data tab: long headers wrap instead of overflowing */
 .dataTables_wrapper th { white-space: normal; }
+
+/* Reviewer feedback (Oct 18, 2026) */
+/* Overview card 1: the selected-period total is a smaller secondary line */
+.kpi-secondary { font-size: 0.8rem; margin: 0.25rem 0 0 0; opacity: 0.95; }
+.kpi-secondary .shiny-html-output { display: inline; }
+/* Quick period buttons in the sidebar */
+.quick-periods { display: flex; flex-wrap: wrap; gap: 4px; margin: -0.4rem 0 0.6rem 0; }
+.quick-periods .btn { padding: 1px 7px; font-size: 0.78rem; }
+/* "What the data show": date line */
+.highlights-date { font-size: 0.85rem; margin-bottom: 0.3rem; color: #003366; }

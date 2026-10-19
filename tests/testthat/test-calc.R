@@ -304,7 +304,8 @@ test_that("the Unknown-IMP note uses the selected geography and handles edge cas
   expect_match(ca, "across Canada", fixed = TRUE)
   expect_match(bc, "in British Columbia", fixed = TRUE)
   expect_match(bc, sprintf("a peak of %s in %s", fmt_n(e_bc$peak), e_bc$peak_year), fixed = TRUE)
-  expect_match(bc, sprintf("%s in 2015\u20132020 combined", fmt_n(e_bc$early)), fixed = TRUE)
+  expect_match(bc, "does not identify the program", fixed = TRUE)
+  expect_no_match(bc, "record", ignore.case = TRUE)                # no claim about recording
   expect_match(ca, sprintf("a peak of %s in %s", fmt_n(e_ca$peak), e_ca$peak_year), fixed = TRUE)
   expect_true(e_bc$peak < e_ca$peak)                       # BC is not Canada's number
   expect_no_match(bc, fmt_n(e_ca$peak), fixed = TRUE)
@@ -319,6 +320,6 @@ test_that("the Unknown-IMP note uses the selected geography and handles edge cas
     expect_no_match(txt, "NA|Inf|n/a")
   }
   expect_match(unknown_imp_note_text(only_partial, "Yukon", latest), "no full calendar year")
-  expect_match(unknown_imp_note_text(zeros, "Yukon", latest), "records no IMP permits in Yukon")
+  expect_match(unknown_imp_note_text(zeros, "Yukon", latest), "No IMP permits in Yukon")
   expect_no_match(unknown_imp_note_text(zeros, "Yukon", latest), "growing")
 })
