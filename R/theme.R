@@ -124,7 +124,7 @@ source_line <- function(meta, extra = NULL) {
     htmltools::HTML(paste0(
       "Source: IRCC open data (", a(meta$urls[["TFWP"]], "TFWP"), ", ", a(meta$urls[["IMP"]], "IMP"),
       "), ", htmltools::htmlEscape(data_date_text(meta)), ". ",
-      "Permits, not people; counts of 0\u20135 shown as 0. ")),
+      "Counts are permits issued, not people; IRCC hides counts of 0\u20135, shown here as 0. ")),
     extra
   )
 }
@@ -152,11 +152,11 @@ KEY_EVENTS <- data.frame(
                     "2024-11-01", "2025-01-01")),
   # Very short names, used to build one label when events share a year in
   # the annual view (e.g. "2024: study cap & TR target & TFWP limits & PGWP rules")
-  tiny = c("COVID-19 travel limits", "study cap", "TR target", "TFWP limits",
-           "PGWP rules", "family OWP limits"),
+  tiny = c("COVID-19 travel limits", "study cap", "resident target", "TFWP limits",
+           "graduate permit rules", "family permit limits"),
   short = c("COVID-19 travel limits (Mar 2020)", "Study permit cap (Jan 2024)",
             "Temporary resident target (Mar 2024)", "Low-wage TFWP limits (Sep 2024)",
-            "PGWP rules (Nov 2024)", "Family open work permits narrowed (Jan 2025)"),
+            "Graduate work permit rules (Nov 2024)", "Family work permits narrowed (Jan 2025)"),
   label = c("March 2020: federal COVID-19 travel restrictions on foreign nationals take effect (March 18)",
             "January 2024: IRCC sets a two-year intake cap on new study permit applications (announced January 22)",
             "March 2024: federal government announces a target to lower temporary residents' share of the population",
@@ -183,9 +183,9 @@ KEY_EVENTS <- data.frame(
 # are outside its new-arrival targets, and that PGWPs are treated as an
 # extension or change of status, not new arrivals (table footnotes 2 and 3).
 IN_CANADA_NOTE <- list(
-  text = paste("These are permits that took effect, not people or new arrivals. They include",
-               "permits for people already in Canada, such as extensions and changes of status",
-               "(IRCC treats post-graduation work permits this way), so the counts can rise",
+  text = paste("These are permits issued, not people or new arrivals. They include permits for",
+               "people already in Canada who renew a permit or switch to a new one, such as international",
+               "students moving to a post-graduation work permit, so the counts can rise",
                "while new arrivals fall."),
   source = "IRCC, Supplementary Information for the 2026\u20132028 Immigration Levels Plan, table footnotes 2 and 3",
   url = "https://www.canada.ca/en/immigration-refugees-citizenship/corporate/immigration-system/levels/supplementary-immigration-levels-2026-2028.html"
@@ -200,6 +200,6 @@ event_notes_html <- function(ev) {
   items <- sprintf('<a href="%s" target="_blank" title="%s">%s</a>',
                    esc(ev$url, attribute = TRUE), esc(paste0(ev$label, ". Source: ", ev$source), attribute = TRUE),
                    esc(ev$short))
-  htmltools::HTML(paste0("Dotted lines: events for context only; they do not imply cause (",
+  htmltools::HTML(paste0("Dotted lines mark policy changes, for context only; they do not imply cause (",
                          paste(items, collapse = "; "), ")."))
 }

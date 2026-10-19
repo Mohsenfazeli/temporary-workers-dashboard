@@ -129,38 +129,33 @@ same_months_limit <- function(on, resolution, latest_month) {
 }
 
 # ---- 4. Period labels for the annual view -----------------------------------
-# A year is "full" only if all 12 months are selected. The latest year in
-# the data (2026) is always labelled year-to-date (YTD), e.g.
-# "2026 YTD (Jan-Jul)", and a year cut by the slider is labelled partial,
-# e.g. "2019 (Mar-Dec)". This stops a part-year being read as a full year.
-#' Short axis version of a year label, for crowded category axes:
-#' "2026 YTD (Jan\u2013Jul)" -> "2026<br>YTD"; full years are unchanged; other
-#' part-years ("2015 (Mar\u2013Dec)") -> "2015<br>part".
+# A year is "full" only if all 12 months are selected. Any other year is a
+# part year and its label names the months it covers, e.g. "2026 (Jan-Jul)"
+# for the latest year (data to July) or "2019 (Mar-Dec)" for a year cut by the
+# slider. Plain month names are used instead of "YTD" or "part", so a part
+# year is never read as a full year.
+#' Short axis version of a year label, for crowded category axes: the months
+#' go on a second line, e.g. "2026 (Jan\u2013Jul)" -> "2026<br>Jan\u2013Jul";
+#' full years are unchanged.
 short_year_label <- function(label) {
   label <- as.character(label)
-  out <- sub("^(\\d{4}) YTD.*$", "\\1<br>YTD", label)
-  sub("^(\\d{4}) \\(.*\\)$", "\\1<br>part", out)
+  sub("^(\\d{4}) \\((.*)\\)$", "\\1<br>\\2", label)
 }
 
 year_label <- function(year, first_m, last_m, latest_month) {
   n_months  <- last_m - first_m + 1
   months_tx <- ifelse(first_m == last_m, month.abb[first_m],
                       paste0(month.abb[first_m], "\u2013", month.abb[last_m]))
-  is_latest <- year == lubridate::year(latest_month) &
-    lubridate::month(latest_month) < 12
-  dplyr::case_when(
-    is_latest & first_m == 1 & last_m == lubridate::month(latest_month)
-      ~ paste0(year, " YTD (", months_tx, ")"),
-    n_months == 12 ~ as.character(year),
-    TRUE ~ paste0(year, " (", months_tx, ")")
-  )
+  # latest_month is kept as an argument for callers; every part year,
+  # including the latest one, is labelled with its months.
+  dplyr::if_else(n_months == 12, as.character(year), paste0(year, " (", months_tx, ")"))
 }
 
 # ---- 5. Time series at monthly or annual resolution --------------------------
 #' @param df filtered data (one geography)
 #' @param resolution "Monthly" or "Annual"
 #' @param by extra grouping columns, e.g. "program" or c("program","category")
-#' @param latest_month latest month in the full data (for YTD labels)
+#' @param latest_month latest month in the full data
 #' @return tibble with period (Date: first month of the period), label,
 #'   value, months (number of months included), partial (TRUE/FALSE) and
 #'   masked_cells.
@@ -200,7 +195,7 @@ summarise_series <- function(df, resolution = "Monthly", by = "program",
 # ---- 6. Year-over-year change -----------------------------------------------
 # Monthly: each month vs the same month one year earlier.
 # Annual: each year vs the SAME MONTHS of the previous year. So a full year
-# is compared with the full previous year, and 2026 YTD (Jan-Jul) is
+# is compared with the full previous year, and 2026 (Jan-Jul) is
 # compared with Jan-Jul 2025, never with all of 2025.
 #' @param full_df data for one geography and the chosen programs, ALL months
 #'   (so the year before the slider start is available for comparison)
@@ -304,6 +299,58 @@ kpi_ytd_compare <- function(data, end, geography, programs) {
                else sprintf("%s %d vs %s %d", months_tx, yr, months_tx, yr - 1))
 }
 
+#' The four Overview cards, as plain text (title, value, note), for the
+#' selection's geography and program and the LAST month of the selected
+#' period (by default the latest month IRCC has published, e.g. July 2026):
+#'   1. permits issued from January to that month (year to date)
+#'   2. change from the same months a year earlier
+#'   3. IMP / TFWP split over the same months (with one program: its share)
+#'   4. that single month, with the change from the same month a year earlier
+#' All four cover the same months, so they can be read together; the intro
+#' line names the place, the programs and the months.
+overview_cards <- function(data, end, geography, program_choice) {
+  programs <- programs_from_choice(program_choice)
+  end <- as.Date(end)
+  yr <- as.integer(format(end, "%Y")); m <- as.integer(format(end, "%m"))
+  is_latest <- end == max(data$month)
+  ytd <- kpi_ytd_compare(data, end, geography, programs)
+  months_long <- if (m == 1) "January" else paste("January to", month.name[m])
+  period <- if (m == 12) as.character(yr) else paste(ytd$months, yr)            # "Jan\u2013Jul 2026"
+  prev_period <- if (m == 12) as.character(yr - 1) else paste(ytd$months, yr - 1)
+  sp <- kpi_split(data, lubridate::make_date(yr, 1, 1), end, geography)
+  lt <- kpi_latest(data, end, geography, programs)
+  c1 <- list(
+    title = if (m == 12) sprintf("Work permits issued in %d", yr) else sprintf("Work permits issued, %s", period),
+    value = fmt_n(ytd$value),
+    note  = if (m == 12) "Full calendar year."
+            else if (is_latest) sprintf("%d so far: %s (latest month published).", yr, months_long)
+            else sprintf("%s %d.", months_long, yr))
+  c2 <- list(
+    title = if (m == 12) sprintf("Change from %d", yr - 1) else sprintf("Change from the same months of %d", yr - 1),
+    value = fmt_pct(ytd$change),
+    note  = if (is.na(ytd$prev_value)) "No data for the same months a year earlier."
+            else sprintf("%s in %s, compared with %s in %s.", fmt_n(ytd$value), period,
+                         fmt_n(ytd$prev_value), prev_period))
+  c3 <- if (length(programs) == 2) list(
+    title = sprintf("IMP / TFWP split, %s", period),
+    value = sprintf("%s / %s", fmt_share(sp$share[sp$program == "IMP"], 0), fmt_share(sp$share[sp$program == "TFWP"], 0)),
+    note  = sprintf("IMP %s \u00b7 TFWP %s permits.", fmt_n(sp$value[sp$program == "IMP"]),
+                    fmt_n(sp$value[sp$program == "TFWP"])))
+  else list(
+    title = sprintf("%s share of all work permits, %s", programs, period),
+    value = fmt_share(sp$share[sp$program == programs], 0),
+    note  = sprintf("%s %s of %s permits (TFWP and IMP).", programs,
+                    fmt_n(sp$value[sp$program == programs]), fmt_n(sum(sp$value))))
+  c4 <- list(
+    title = sprintf("%s: %s", if (is_latest) "Latest month" else "Last month selected", fmt_month(end)),
+    value = fmt_n(lt$value),
+    note  = if (is.na(lt$change)) "No data for the same month a year earlier."
+            else sprintf("%s from %s (%s).", fmt_pct(lt$change), fmt_month(lt$prev_month), fmt_n(lt$prev_value)))
+  intro <- sprintf("Key numbers for %s (%s), %s %d. They follow the Geography and Program filters and the last month of the Period.",
+                   geography, program_label(program_choice), months_long, yr)
+  list(intro = intro, cards = list(c1, c2, c3, c4))
+}
+
 #' Change over the selected period.
 #' - 24 months or more: total of the LAST 12 months vs the FIRST 12 months
 #'   of the range (12-month blocks remove seasonal swings).
@@ -318,14 +365,14 @@ kpi_period_change <- function(df) {
     list(change = pct_change(last, first), method = "12m",
          label = "Last 12 months vs first 12 months",
          first_value = first, last_value = last,
-         text = sprintf("last 12 months (%s\u2013%s) vs first 12 months (%s\u2013%s) of the period",
+         text = sprintf("the last 12 months (%s\u2013%s) compared with the first 12 months (%s\u2013%s) of the selected period",
                         fmt_month_short(m$month[n - 11]), fmt_month_short(m$month[n]),
                         fmt_month_short(m$month[1]), fmt_month_short(m$month[12])))
   } else if (n >= 2) {
     list(change = pct_change(m$value[n], m$value[1]), method = "month",
          label = sprintf("%s vs %s", fmt_month_short(m$month[n]), fmt_month_short(m$month[1])),
          first_value = m$value[1], last_value = m$value[n],
-         text = sprintf("%s vs %s (single months; seasonal swings possible)",
+         text = sprintf("%s compared with %s (single months, so seasonal ups and downs show)",
                         fmt_month_short(m$month[n]), fmt_month_short(m$month[1])))
   } else {
     list(change = NA_real_, method = "none", label = "Change over the period",
@@ -490,9 +537,9 @@ table_for_download <- function(df, resolution = "Monthly",
               Geography = geography,
               Program = program,
               Category = as.character(category),
-              `Work permits that took effect` = value,
+              `Work permits issued` = value,
               `Months included` = months,
-              `Suppressed cells (counted as 0)` = masked_cells,
+              `Hidden small counts (counted as 0)` = masked_cells,
               # "Yes" when suppression could understate the figure by over 10%
               `Possible undercount over 10%` = if_else(undercount_flag(value, masked_cells),
                                                        "Yes", ""))
@@ -506,15 +553,15 @@ make_takeaways <- function(data, start, end, geography, program_choice) {
   start <- as.Date(start); end <- as.Date(end)
   sel <- filter_selection(data, start, end, geography, programs)
   if (nrow(sel) == 0 || sum(sel$value) == 0) {
-    return(sprintf("No %s work permits took effect in %s in the selected period.",
-                   program_label(program_choice), geography))
+    return(sprintf("No %s work permits were issued %s in the selected period.",
+                   program_label(program_choice), geo_phrase(geography)))
   }
   out <- character()
   n_months <- length(unique(sel$month))
 
   # 1. Scale: the total and the monthly average
-  out <- c(out, sprintf("%s %s work permits took effect in %s between %s and %s, an average of %s a month.",
-                        fmt_n(sum(sel$value)), program_label(program_choice), geography,
+  out <- c(out, sprintf("%s %s work permits were issued %s from %s to %s, an average of %s a month. These are permits, not people: one person can get more than one permit.",
+                        fmt_n(sum(sel$value)), program_label(program_choice), geo_phrase(geography),
                         fmt_month(start), fmt_month(end), fmt_n(round(sum(sel$value) / n_months))))
   n_masked <- sum(sel$masked_cells)
   if (n_masked > 0 && n_masked * 5 >= 0.05 * sum(sel$value)) {
@@ -561,13 +608,13 @@ make_takeaways <- function(data, start, end, geography, program_choice) {
     is_ytd <- end == max(data$month) && format(min(ytd_months), "%m") == "01"
     lead <- if (is_ytd) sprintf("In %s so far (%s)", end_year, months_tx)
             else sprintf("In the selected months of %s (%s)", end_year, months_tx)
-    out <- c(out, sprintf("%s, %s permits took effect, %s %s on the same months of %s.",
+    out <- c(out, sprintf("%s, %s permits were issued, %s %s on the same months of %s.",
                           lead, fmt_n(cur), dir_word(ch), sub("^[+-]", "", fmt_pct(ch)),
                           end_year - 1))
   } else {
     lt <- kpi_latest(data, end, geography, programs)
     if (!is.na(lt$change)) {
-      out <- c(out, sprintf("In %s, %s permits took effect, %s %s from %s.",
+      out <- c(out, sprintf("In %s, %s permits were issued, %s %s from %s.",
                             fmt_month(lt$month), fmt_n(lt$value), dir_word(lt$change),
                             sub("^[+-]", "", fmt_pct(lt$change)), fmt_month(lt$prev_month)))
     }
@@ -604,12 +651,12 @@ make_takeaways <- function(data, start, end, geography, program_choice) {
 
 # ---- 12. Point-stating chart titles -----------------------------------------
 #' Title for the year-over-year chart, naming every plotted series for the
-#' latest period, e.g. "2026 YTD (Jan-Jul): IMP up 63.3%, TFWP down 4.8% (both
-#' programs up 45.8%) vs a year earlier". `y` is yoy_series() output with a
+#' latest period, e.g. "2026 (Jan-Jul) compared with the same months a year
+#' earlier: IMP up 63.3%, TFWP down 4.8%, both programs up 45.8%". `y` is yoy_series() output with a
 #' `program` column ("TFWP", "IMP" and, with both programs, "Total").
 yoy_title_text <- function(y) {
   y <- y[!is.na(y$yoy), ]
-  if (nrow(y) == 0) return("Year-over-year change (not available for this period)")
+  if (nrow(y) == 0) return("Change from a year earlier (not available for this period)")
   last <- y[y$period == max(y$period), ]
   part <- function(pr) {
     r <- last[last$program == pr, ]
@@ -618,21 +665,23 @@ yoy_title_text <- function(y) {
   }
   progs <- intersect(c("IMP", "TFWP"), last$program)
   each <- paste(vapply(progs, function(pr) paste(pr, part(pr)), character(1)), collapse = ", ")
-  tot <- if ("Total" %in% last$program) sprintf(" (both programs %s)", part("Total")) else ""
-  sprintf("%s: %s%s vs a year earlier", last$label[1], each, tot)
+  tot <- if ("Total" %in% last$program) sprintf(", both programs %s", part("Total")) else ""
+  # A part year (e.g. "2026 (Jan-Jul)") is compared with the same months.
+  basis <- if (grepl("(", last$label[1], fixed = TRUE)) "the same months a year earlier" else "a year earlier"
+  sprintf("%s compared with %s: %s%s", last$label[1], basis, each, tot)
 }
 
 
-#' Headline for the trend chart, e.g. "Permits that took effect rose 25%
-#' between the first and last 12 months of the period".
+#' Headline for the trend chart, e.g. "Work permits in Canada (TFWP and IMP):
+#' 2025 was 184.9% higher than 2015; 2026 covers Jan-Jul only".
 trend_title <- function(df, geography, program_choice, resolution = "Monthly",
                         latest_month = max(df$month)) {
-  what <- sprintf("%s permits in %s", program_label(program_choice), geography)
-  # "264.7% above", "12.0% below" or "about the same as" (within +/-2%).
+  what <- sprintf("Work permits in %s (%s)", geography, program_label(program_choice))
+  # "264.7% higher than", "12.0% lower than" or "about the same as" (within +/-2%).
   # One decimal, the same precision as the change card on the Overview.
   rel_text <- function(ch) {
     size <- sub("^[+-]", "", fmt_pct(ch, 1))
-    if (ch >= 0.02) paste(size, "above") else if (ch <= -0.02) paste(size, "below")
+    if (ch >= 0.02) paste(size, "higher than") else if (ch <= -0.02) paste(size, "lower than")
     else "about the same as"
   }
   # Annual view: compare calendar years that are visible on the chart, i.e.
@@ -643,8 +692,11 @@ trend_title <- function(df, geography, program_choice, resolution = "Monthly",
     if (nrow(full) >= 2) {
       ch <- pct_change(full$value[nrow(full)], full$value[1])
       if (!is.na(ch)) {
-        note <- if (any(ann$partial)) sprintf(" (%s shown separately)",
-                                              paste(ann$label[ann$partial], collapse = ", ")) else ""
+        # Part years are named with the months they cover, e.g.
+        # "; 2026 covers Jan-Jul only"
+        part <- ann$label[ann$partial]
+        note <- if (length(part)) paste0("; ", paste(sub("^(\\d{4}) \\((.*)\\)$", "\\1 covers \\2", part),
+                                                     collapse = " and "), " only") else ""
         return(sprintf("%s: %s was %s %s%s", what, full$label[nrow(full)], rel_text(ch),
                        full$label[1], note))
       }
@@ -654,8 +706,7 @@ trend_title <- function(df, geography, program_choice, resolution = "Monthly",
   # change card (last 12 vs first 12 months, or last vs first month).
   pc <- kpi_period_change(df)
   if (is.na(pc$change)) {
-    return(sprintf("%s work permits that took effect in %s",
-                   program_label(program_choice), geography))
+    return(what)
   }
   if (pc$method == "12m") {
     sprintf("%s: the last 12 months were %s the first 12 months selected", what, rel_text(pc$change))
@@ -687,7 +738,7 @@ unknown_imp_note_text <- function(data, geography, latest_month) {
   imp <- data[data$geography == geography & data$program == "IMP", ]
   latest_year <- as.integer(format(latest_month, "%Y"))
   imp <- imp[imp$year != latest_year, ]
-  lead <- "IRCC does not identify the program for some IMP permits (\"Unknown International Mobility Program\")"
+  lead <- "For some IMP permits IRCC does not identify the program (IRCC's label: \"Unknown International Mobility Program\"; grey in the IMP chart)"
   if (nrow(imp) == 0) {
     return(sprintf("%s; there is no full calendar year of data %s to count them. ", lead, where))
   }
@@ -695,7 +746,7 @@ unknown_imp_note_text <- function(data, geography, latest_month) {
   u_by   <- tapply(imp$value * is_u, imp$year, sum)       # unknown-program permits per year
   all_by <- tapply(imp$value, imp$year, sum)              # all IMP permits per year
   masked <- any(imp$any_masked[is_u])                     # any suppressed cell used?
-  mask_note <- if (masked) " Suppressed IRCC counts (0 to 5) are counted as 0." else ""
+  mask_note <- if (masked) " IRCC's hidden small counts (0 to 5) are counted as 0." else ""
   yrs <- names(u_by)
   if (all(u_by == 0)) {
     return(sprintf("No IMP permits %s are in IRCC's \"Unknown International Mobility Program\" group in %s\u2013%s.%s ",
@@ -715,7 +766,7 @@ unknown_imp_note_text <- function(data, geography, latest_month) {
   range_tx <- if (length(span) > 1) sprintf("%s\u2013%s they were %s to %s of IMP permits each year",
                                             yrs[first_u], yrs[length(yrs)], fmt_share(min(share)), fmt_share(max(share)))
               else sprintf("%s they were %s of IMP permits", yrs[first_u], fmt_share(share[1]))
-  sprintf("%s. %s%s (a peak of %s in %s).%s Tick \"known program only\" to see shares of the permits whose program is known. ",
+  sprintf("%s. %s%s (a peak of %s in %s).%s To see the mix without them, tick \"IMP shares: leave out Unknown IMP\". ",
           lead, none_before, range_tx, fmt_n(max(u_by)), peak, mask_note)
 }
 

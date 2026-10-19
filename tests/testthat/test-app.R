@@ -43,10 +43,10 @@ test_that("the app launches and every tab renders", {
     app$wait_for_idle(500)
     expect_equal(app$get_value(input = "nav"), t)
   }
-  expect_match(app$get_value(output = "overview-kpi_total"), "^[0-9,]+$")
+  expect_match(app$get_value(output = "overview-kpi_ytd"), "^[0-9,]+$")
   expect_match(app$get_value(output = "trends-trend_title"), "permits")
   expect_match(app$get_value(output = "geography-rank_title"), "received")
-  expect_match(app$get_value(output = "composition-mix_title"), "^Post-graduation work permits \\(IMP\\) was the largest category: 24% of permits")
+  expect_match(app$get_value(output = "composition-mix_title"), "^Post-graduation work permits \\(IMP\\) was the largest category: 24% of all permits")
   expect_match(app$get_value(output = "data-title"), "rows")
   # plotly charts on the visible tab produced figures
   app$set_inputs(nav = "Trends"); app$wait_for_idle(1000)
@@ -60,7 +60,7 @@ test_that("every geography and program combination works in the browser without 
   app$set_inputs(nav = "Overview")
   for (geo in c("Canada", PROVINCES_TERRITORIES)) for (prog in c("Both", "TFWP", "IMP")) {
     app$set_inputs(geography = geo, program = prog)
-    v <- app$get_value(output = "overview-kpi_total")
+    v <- app$get_value(output = "overview-kpi_ytd")
     expect_match(v, "^[0-9,]+$", info = paste(geo, prog))
     expect_match(app$get_value(output = "overview-headline_title"), geo, fixed = TRUE)
   }
@@ -70,10 +70,10 @@ test_that("every geography and program combination works in the browser without 
 test_that("the slider and the monthly/annual toggle update the outputs; reset restores defaults", {
   app <- start_app()
   on.exit(app$stop())
-  total_all <- app$get_value(output = "overview-kpi_total")
+  total_all <- app$get_value(output = "overview-kpi_ytd")
   set_range(app, "Jan 2020", "Dec 2022")
   expect_equal(app$get_value(input = "range"), c("Jan 2020", "Dec 2022"))
-  expect_false(identical(app$get_value(output = "overview-kpi_total"), total_all))
+  expect_false(identical(app$get_value(output = "overview-kpi_ytd"), total_all))
   app$set_inputs(nav = "Data"); app$wait_for_idle(800)
   expect_match(app$get_value(output = "data-title"), "Jan 2020\u2013Dec 2022")
   app$set_inputs(resolution = "Monthly")
@@ -84,7 +84,7 @@ test_that("the slider and the monthly/annual toggle update the outputs; reset re
   app$click("reset"); app$wait_for_idle(1500)
   expect_equal(app$get_value(input = "resolution"), "Annual")
   expect_equal(app$get_value(input = "range"), c("Jan 2015", "Jul 2026"))
-  expect_equal(app$get_value(output = "overview-kpi_total"), total_all)
+  expect_equal(app$get_value(output = "overview-kpi_ytd"), total_all)
 })
 
 test_that("the CSV download works and matches the selection", {
@@ -96,10 +96,10 @@ test_that("the CSV download works and matches the selection", {
   csv <- readr::read_csv(f, show_col_types = FALSE)
   expect_equal(nrow(csv), 12 * 12)                      # 12 years x 12 categories
   expect_true(all(csv$Geography == "British Columbia"))
-  expect_true("Work permits that took effect" %in% names(csv))
+  expect_true("Work permits issued" %in% names(csv))
   bc <- kpi_total(filter_selection(BUNDLE$data, min(BUNDLE$data$month),
                                    BUNDLE$meta$latest_month, "British Columbia", c("TFWP", "IMP")))
-  expect_equal(sum(csv$`Work permits that took effect`), bc)
+  expect_equal(sum(csv$`Work permits issued`), bc)
 })
 
 test_that("when the live read fails the app falls back to the cache and says so", {
@@ -108,7 +108,7 @@ test_that("when the live read fails the app falls back to the cache and says so"
   bar <- status_text(app)
   expect_match(bar, "Using saved data")
   expect_match(bar, "download failed")
-  expect_match(app$get_value(output = "overview-kpi_total"), "^[0-9,]+$")
+  expect_match(app$get_value(output = "overview-kpi_ytd"), "^[0-9,]+$")
 })
 
 test_that("a file with an extra month extends the slider, header and charts automatically", {

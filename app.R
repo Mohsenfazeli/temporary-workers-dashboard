@@ -75,11 +75,14 @@ status_bar <- htmltools::div(
     htmltools::tags$span(htmltools::tags$strong("Data last retrieved: "),
                          fmt_datetime(META$retrieved_at))
   },
-  " \u00b7 ",
-  htmltools::tags$span(htmltools::tags$strong("Latest month available: "),
-                       fmt_month(META$latest_month)),
-  " \u00b7 ",
-  htmltools::tags$span("Source: IRCC open data"),
+  # The release phrase already names IRCC and the latest month, so the
+  # latest month and source are added only for a live read or saved copy.
+  if (!identical(META$source, "release")) htmltools::tagList(
+    " \u00b7 ",
+    htmltools::tags$span(htmltools::tags$strong("Latest month available: "),
+                         fmt_month(META$latest_month)),
+    " \u00b7 ",
+    htmltools::tags$span("Source: IRCC open data")),
   if (identical(META$source, "cache")) htmltools::div(
     class = "alert alert-warning py-1 px-2 my-1", role = "alert",
     htmltools::tags$strong("Using saved data. "),
@@ -97,7 +100,7 @@ sidebar_controls <- bslib::sidebar(
   # Open on desktop; on a phone the filters sit above the charts.
   open = list(desktop = "open", mobile = "always-above"),
   shinyWidgets::sliderTextInput(
-    "range", "Period (month the permit took effect)",
+    "range", "Period (month the permit was issued)",
     choices = MONTH_LABELS, selected = c(MONTH_LABELS[1], tail(MONTH_LABELS, 1)),
     grid = FALSE, force_edges = TRUE, width = "100%"),
   # Quick periods: set the slider in one click
@@ -105,14 +108,14 @@ sidebar_controls <- bslib::sidebar(
     shiny::actionButton("qp_full", "Full period", class = "btn-sm btn-outline-secondary"),
     shiny::actionButton("qp_12m", "Last 12 months", class = "btn-sm btn-outline-secondary"),
     shiny::actionButton("qp_ytd", paste(format(META$latest_month, "%Y"), "so far"), class = "btn-sm btn-outline-secondary"),
-    shiny::actionButton("qp_2019", "2019 to latest", class = "btn-sm btn-outline-secondary")),
+    shiny::actionButton("qp_2019", "Since 2019", class = "btn-sm btn-outline-secondary")),
   shiny::radioButtons("resolution", "View", choices = c("Monthly", "Annual"),
                       selected = "Annual", inline = TRUE),
   # Annual view only: compare the same months of every year (e.g. Jan-Jul),
   # so the latest part-year is not read against full years.
   if (LATEST_M < 12) shiny::conditionalPanel("input.resolution == 'Annual'",
     shiny::checkboxInput("same_months",
-      sprintf("Same months each year (%s), to compare with %s", YTD_MONTHS, format(META$latest_month, "%Y")),
+      sprintf("Show only %s of each year, to compare fairly with %s", YTD_MONTHS, format(META$latest_month, "%Y")),
       value = FALSE)),
   shiny::selectInput("geography", "Geography", choices = GEOGRAPHIES, selected = "Canada"),
   shiny::radioButtons("program", "Program",
@@ -121,11 +124,15 @@ sidebar_controls <- bslib::sidebar(
   shiny::actionButton("reset", "Reset filters", icon = shiny::icon("rotate-left"),
                       class = "btn-outline-primary"),
   htmltools::tags$div(class = "sidebar-help",
-    htmltools::tags$p(htmltools::tags$strong("TFWP"), ": Temporary Foreign Worker Program. The employer usually needs a Labour Market Impact Assessment (LMIA) showing no Canadian is available."),
-    htmltools::tags$p(htmltools::tags$strong("IMP"), ": International Mobility Program. No LMIA needed, e.g. graduates, spouses, working holiday, trade agreements. IRCC's IMP table excludes people here mainly for other reasons (e.g. asylum claimants)."),
-    htmltools::tags$p(paste0("Figures count work permits that took effect. ",
-                      format(META$latest_month, "%Y"), " is year-to-date to ",
-                      month.name[as.integer(format(META$latest_month, "%m"))], ".")))
+    htmltools::tags$p(htmltools::tags$strong("TFWP (Temporary Foreign Worker Program)", .noWS = "after"),
+      ": an employer hires a foreign worker for a job, usually after a government check, the Labour Market Impact Assessment (LMIA), shows no Canadian worker is available."),
+    htmltools::tags$p(htmltools::tags$strong("IMP (International Mobility Program)", .noWS = "after"),
+      ": work permits that do not need that check, for example for graduates of Canadian colleges and universities, spouses of workers or students, working holidays and trade agreements. ",
+      "Not included: permits for people in Canada mainly for other reasons, such as asylum claimants (IRCC leaves them out of this table)."),
+    htmltools::tags$p(htmltools::tags$strong("What is counted", .noWS = "after"),
+      paste0(": work permits issued each month, including renewals. These are permits, not people. ",
+             format(META$latest_month, "%Y"), " has data for January to ",
+             month.name[as.integer(format(META$latest_month, "%m"))], " only.")))
 )
 
 ui <- bslib::page_navbar(

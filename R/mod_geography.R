@@ -20,7 +20,7 @@ geography_ui <- function(id) {
       bslib::card(
         full_screen = TRUE,
         bslib::card_header(htmltools::tags$h2(class = "chart-title",
-          "Provinces and territories: size, share of Canada and growth")),
+          "Provinces and territories: permits, share of Canada and growth")),
         bslib::card_body(DT::DTOutput(ns("rank_table"))),
         bslib::card_footer(shiny::uiOutput(ns("table_source")))
       )
@@ -39,9 +39,9 @@ geography_server <- function(id, sel, data, meta) {
     output$rank_title <- shiny::renderText({
       r <- rank(); s <- sel()
       top3 <- sum(r$share[1:3], na.rm = TRUE)
-      sprintf("%s, %s and %s received %s of %s permits in the period (period totals)",
+      sprintf("%s, %s and %s received %s of %s permits, %s\u2013%s",
               r$geography[1], r$geography[2], r$geography[3], fmt_share(top3, 0),
-              program_label(s$program_choice))
+              program_label(s$program_choice), fmt_month_short(s$start), fmt_month_short(s$end))
     })
     output$rank_plot <- plotly::renderPlotly({
       r <- rank(); s <- sel()
@@ -86,7 +86,7 @@ geography_server <- function(id, sel, data, meta) {
       shiny::updateSelectInput(session$rootScope(), "geography", selected = place)
     }, ignoreInit = TRUE)
     output$rank_source <- shiny::renderUI(source_line(meta,
-      extra = "Bars rank totals for the whole selected period (the Monthly/Annual view applies to the time charts only), with the share of Canada in brackets. Share of Canada includes permits with no province/territory stated in the Canada total; that group is not ranked."))
+      extra = "Each bar is the total for the whole selected period, with its share of Canada in brackets. Canada's total also includes permits with no province or territory given, which have no bar."))
 
     output$rank_table <- DT::renderDT({
       r <- rank(); s <- sel()
@@ -111,9 +111,9 @@ geography_server <- function(id, sel, data, meta) {
     }, server = FALSE)   # client-side: 13 rows, data sent with the table
     output$table_source <- shiny::renderUI(source_line(meta,
       # The only explanation of Growth (no duplicate table caption)
-      extra = paste0("Share = share of Canada's permits. Growth = ", (\(s) kpi_period_change(filter_selection(
+      extra = paste0("Share = share of all permits in Canada. Growth = ", (\(s) kpi_period_change(filter_selection(
         data, s$start, s$end, "Canada", s$programs))$text)(sel()), ". ",
-        "*Note \"Small n\": suppressed values (0\u20135 each, counted as 0) could add more than 10% to that total, so treat its share and growth with care.")))
+        "*\"Small n\" = few permits: IRCC's hidden small counts (0\u20135 each, shown as 0) could add more than 10% to the total, so read its share and growth with care.")))
 
     # ---- Compare the selected province/territory with Canada ----
     cmp <- shiny::reactive({
@@ -137,15 +137,16 @@ geography_server <- function(id, sel, data, meta) {
         sh <- shares()
         lead <- sh[sh$place == levels(sh$place)[1], ]
         if (nrow(lead) < 2) return("Share of Canada's permits held by the five largest provinces")
-        return(sprintf("%s's share of Canada's %s permits went from %s (%s) to %s (%s); choose a province in the sidebar to compare it with Canada",
+        return(sprintf("%s's share of Canada's %s permits went from %s in %s to %s in %s. Choose a province in the sidebar to compare it with Canada",
                        lead$place[1], program_label(s$program_choice),
                        fmt_share(lead$share[1], 0), lead$label[1],
                        fmt_share(lead$share[nrow(lead)], 0), lead$label[nrow(lead)]))
       }
       sh <- sum(c$value_pt) / sum(c$value_canada)
-      sprintf("%s received %s of Canada's %s permits in the period; %s change compared with Canada",
+      sprintf("%s received %s of Canada's %s permits, %s\u2013%s. Change from a year earlier: %s and Canada%s",
               s$geography, fmt_share(sh), program_label(s$program_choice),
-              if (s$resolution == "Annual") "year-over-year" else "monthly year-over-year")
+              fmt_month_short(s$start), fmt_month_short(s$end), s$geography,
+              if (s$resolution == "Annual") "" else ", by month")
     })
     output$compare_plot <- plotly::renderPlotly({
       s <- sel(); c <- cmp()
@@ -169,7 +170,7 @@ geography_server <- function(id, sel, data, meta) {
             marker = list(color = pal[i], size = 7), text = ~hover, hoverinfo = "text")
         }
         return(style_plot(p,
-          if (s$resolution == "Monthly") "Month the permit took effect" else "Year the permit took effect",
+          if (s$resolution == "Monthly") "Month issued" else "Year issued",
           "Share of Canada's permits (%)", y_format = ".0%",
           x_type = if (s$resolution == "Monthly") "date" else "category") |>
           plotly::layout(legend = list(orientation = "h", x = 0, y = 1.02, yanchor = "bottom"),
@@ -192,7 +193,7 @@ geography_server <- function(id, sel, data, meta) {
         long$period <- c$period[match(long$label, c$label)]
         p <- plotly::plot_ly(long, x = ~period, y = ~yoy, color = ~place, colors = cols,
                              type = "scatter", mode = "lines", text = ~hover, hoverinfo = "text")
-        return(style_plot(p, "Month", "Change vs same month a year earlier (%)",
+        return(style_plot(p, "Month", "Change from the same month a year earlier (%)",
                           y_format = ".0%", x_type = "date") |>
                  plotly::layout(yaxis = list(rangemode = "normal"),
                                 xaxis = list(tickformat = "%Y", dtick = "M12")))
@@ -201,20 +202,21 @@ geography_server <- function(id, sel, data, meta) {
                            type = "bar", text = ~hover, hoverinfo = "text",
                            textposition = "none",
                            marker = list(line = list(color = "#333333", width = 0.5)))
-      style_plot(p, "Year the permit took effect",
-                 "Change vs a year earlier (%)", y_format = ".0%", x_type = "category") |>
+      style_plot(p, "Year issued",
+                 "Change from a year earlier (%)", y_format = ".0%", x_type = "category") |>
         plotly::layout(barmode = "group", yaxis = list(rangemode = "normal"))
     })
     # ---- Contribution to change: latest year to date vs same months a year earlier ----
-    # Follows the program filter; the period is fixed (the latest year to date,
-    # as on the Overview card), so it does not use the date slider.
-    contrib <- shiny::reactive(contribution_to_change(data, meta$latest_month, sel()$programs))
+    # Follows the program filter and the last month of the period slider.
+    # Same months as the Overview cards: January to the last month of the
+    # selected period (by default 2026 so far) vs the same months a year earlier.
+    contrib <- shiny::reactive(contribution_to_change(data, sel()$end, sel()$programs))
     output$contrib_title <- shiny::renderText({
       x <- contrib(); s <- sel(); ch <- attr(x, "canada_change")
       if (is.na(ch) || ch == 0) return(sprintf("Contribution to Canada's change in %s permits, %s",
                                                program_label(s$program_choice), attr(x, "label")))
       word <- if (ch > 0) "increase" else "decrease"
-      tx <- sprintf("%s accounted for %s of Canada's %s in %s permits, %s",
+      tx <- sprintf("%s made up %s of Canada's %s in %s permits, %s",
                     x$geography[1], fmt_share(x$contribution[1]), word,
                     program_label(s$program_choice), attr(x, "label"))
       if (s$geography != "Canada" && s$geography != x$geography[1]) {
@@ -225,6 +227,7 @@ geography_server <- function(id, sel, data, meta) {
     })
     output$contrib_plot <- plotly::renderPlotly({
       x <- contrib(); s <- sel()
+      if (is.na(attr(x, "canada_change"))) return(empty_plot("This needs data from a year earlier"))
       if (all(is.na(x$contribution))) return(empty_plot("Canada's total did not change, so shares of the change are not defined"))
       x <- x[order(x$contribution), ]
       x$geography <- factor(x$geography, levels = x$geography)
@@ -243,15 +246,16 @@ geography_server <- function(id, sel, data, meta) {
                        yaxis = list(title = NULL, tickformat = NULL), margin = list(l = 170, r = 40))
     })
     output$contrib_source <- shiny::renderUI(source_line(meta, extra = paste0(
-      "Share of Canada's change = the province or territory's change ÷ Canada's change, ",
-      attr(contrib(), "label"), " (same months as the Overview card; the date slider does not apply). ",
-      "Canada includes permits with no province/territory stated, which are not listed, so the shares do not add to exactly 100%.")))
+      "Share of Canada's change = the province or territory's change in permits \u00f7 Canada's change, ",
+      attr(contrib(), "label"), " (the same months as the Overview cards). ",
+      "A negative share means the province or territory moved the opposite way to Canada (for example, fell while Canada rose). ",
+      "Permits with no province or territory given are not listed, so the shares do not add to exactly 100%.")))
 
     output$compare_source <- shiny::renderUI({
       s <- sel()
       source_line(meta, extra = if (s$geography == "Canada")
-        "Share = province/territory permits \u00f7 Canada permits (Canada includes permits with no province/territory stated)."
-        else "Part-years (e.g. year-to-date) are compared with the same months a year earlier.")
+        "Share = the province or territory's permits \u00f7 Canada's permits (Canada also includes permits with no province or territory given)."
+        else "Each year is compared with the year before; a part year, such as 2026 (January to July), with the same months a year earlier.")
     })
   })
 }

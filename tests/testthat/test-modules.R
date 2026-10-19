@@ -13,10 +13,10 @@ make_sel <- function(geo = "Canada", prog = "Both", res = "Annual",
 
 # The outputs each module produces.
 OUTPUTS <- list(
-  overview = c("kpi_total", "kpi_split", "kpi_latest", "kpi_change", "headline_title",
-               "headline_plot", "takeaways", "kpi_total_sub", "kpi_latest_sub", "kpi_change_sub",
-               "kpi_split_title", "kpi_split_sub", "kpi_change_title",
-               "kpi_year", "kpi_year_title", "kpi_year_sub", "highlights"),
+  overview = c("kpi_intro", "kpi_ytd", "kpi_ytd_title", "kpi_ytd_sub", "kpi_change",
+               "kpi_change_title", "kpi_change_sub", "kpi_split", "kpi_split_title",
+               "kpi_split_sub", "kpi_latest", "kpi_latest_title", "kpi_latest_sub",
+               "headline_title", "headline_plot", "takeaways", "highlights"),
   trends = c("trend_title", "trend_plot", "yoy_title", "yoy_plot", "trend_source"),
   geography = c("rank_title", "rank_plot", "rank_table", "compare_title", "compare_plot",
                 "contrib_title", "contrib_plot"),
@@ -82,13 +82,9 @@ test_that("the date-range slider changes every chart and title", {
     a <- render_all(mod, make_sel("British Columbia", start = first, end = latest))
     b <- render_all(mod, make_sel("British Columbia", start = "2020-01-01", end = "2022-12-01"))
     changed <- names(a)[unlist(a) != unlist(b)]
-    charts <- grep("plot|table|title$|^kpi_total$", names(a), value = TRUE)
-    # KPI card labels (e.g. "Split: IMP vs TFWP") name what is measured, not
-    # the value, so they rightly stay the same when only the dates change
-    charts <- setdiff(charts, c("kpi_split_title", "kpi_change_title",
-    # The contribution chart always compares the latest year to date with the
-    # same months a year earlier (as the Overview card), so it ignores the slider
-                                "contrib_title", "contrib_plot"))
+    # Every chart, table and title changes, including the cards and the
+    # contribution chart, which follow the last month of the period.
+    charts <- grep("plot|table|title$|^kpi_", names(a), value = TRUE)
     expect_true(all(charts %in% changed), info = paste(mod, "unchanged:",
                 paste(setdiff(charts, changed), collapse = ", ")))
   }
@@ -122,13 +118,42 @@ test_that("the Trends tab shows only data from the two IRCC CSV files", {
 
 test_that("the split card follows the program filter", {
   both <- render_all("overview", make_sel("Canada", "Both", "Annual"))
-  expect_match(both$kpi_split_title, "Split: IMP vs TFWP")
+  expect_match(both$kpi_split_title, "IMP / TFWP split, Jan\u2013Jul 2026", fixed = TRUE)
   tf <- render_all("overview", make_sel("Canada", "TFWP", "Annual"))
-  expect_match(tf$kpi_split_title, "TFWP share of all work permits")
-  sp <- kpi_split(d, "2015-01-01", meta$latest_month, "Canada")
+  expect_match(tf$kpi_split_title, "TFWP share of all work permits, Jan\u2013Jul 2026", fixed = TRUE)
+  sp <- kpi_split(d, "2026-01-01", meta$latest_month, "Canada")         # same months as card 1
   expect_match(tf$kpi_split, fmt_share(sp$share[sp$program == "TFWP"], 0), fixed = TRUE)
   expect_no_match(tf$kpi_split_sub, "IMP [0-9]")
-  expect_match(tf$kpi_change_title, "Jan\u2013Jul 2026 vs Jan\u2013Jul 2025", fixed = TRUE)
+  expect_match(tf$kpi_change_title, "Change from the same months of 2025", fixed = TRUE)
+})
+
+test_that("the four cards cover the same months and follow place, program and the END of the period", {
+  ov <- render_all("overview", make_sel("Canada", "Both", "Annual"))
+  expect_match(ov$kpi_intro, "Key numbers for Canada (TFWP and IMP), January to July 2026.", fixed = TRUE)
+  expect_match(ov$kpi_ytd_title, "Work permits issued, Jan\u2013Jul 2026", fixed = TRUE)
+  expect_match(ov$kpi_ytd, "673,280", fixed = TRUE)
+  expect_match(ov$kpi_change, "+45.8%", fixed = TRUE)
+  expect_match(ov$kpi_change_sub, "673,280 in Jan\u2013Jul 2026, compared with 461,760 in Jan\u2013Jul 2025", fixed = TRUE)
+  expect_match(ov$kpi_split, "83% / 17%", fixed = TRUE)
+  expect_match(ov$kpi_latest_title, "Latest month: July 2026", fixed = TRUE)
+  expect_match(ov$kpi_latest, "72,495", fixed = TRUE)
+  # Independent check (base R): Jan-Jul 2026 for B.C., both programs
+  bc <- render_all("overview", make_sel("British Columbia", "Both", "Annual"))
+  v <- sum(d$value[d$geography == "British Columbia" & d$year == 2026])
+  expect_match(bc$kpi_ytd, fmt_n(v), fixed = TRUE)
+  # The start of the period does not change the cards; the end does
+  late <- render_all("overview", make_sel("Canada", "Both", "Annual", start = "2024-01-01"))
+  expect_identical(late[grep("^kpi_", names(late))], ov[grep("^kpi_", names(ov))])
+  y24 <- render_all("overview", make_sel("Canada", "Both", "Annual", end = "2024-12-01"))
+  expect_match(y24$kpi_ytd_title, "Work permits issued in 2024", fixed = TRUE)
+  expect_match(y24$kpi_ytd, fmt_n(sum(d$value[d$geography == "Canada" & d$year == 2024])), fixed = TRUE)
+  expect_match(y24$kpi_latest_title, "Last month selected: December 2024", fixed = TRUE)
+  expect_match(y24$kpi_change_title, "Change from 2023", fixed = TRUE)
+  # The contribution chart (Geography) uses the same months as the cards
+  g <- render_all("geography", make_sel("Canada", "Both", "Annual"))
+  expect_match(g$contrib_title, "Jan\u2013Jul 2026 vs Jan\u2013Jul 2025", fixed = TRUE)
+  g24 <- render_all("geography", make_sel("Canada", "Both", "Annual", end = "2024-12-01"))
+  expect_match(g24$contrib_title, "2024 vs 2023", fixed = TRUE)
 })
 
 test_that("the composition mix can be shown as numbers, and the glossary is shown", {
@@ -138,7 +163,7 @@ test_that("the composition mix can be shown as numbers, and the glossary is show
     session$setInputs(`x-measure` = "number")
     num <- paste(format(output[["x-share_imp_plot"]]), collapse = "")
     expect_false(identical(pct, num))
-    expect_match(num, "Work permits that took effect (number)", fixed = TRUE)
+    expect_match(num, "Work permits issued (number)", fixed = TRUE)
     expect_match(pct, "Share of the program", fixed = TRUE)
   })
   ui <- as.character(composition_ui("x"))
@@ -169,7 +194,7 @@ test_that("the 'Reading the IMP mix' note follows the selected geography", {
   }
   expect_match(bc, paste("a peak of", fmt_n(peak_of("British Columbia"))), fixed = TRUE)
   expect_no_match(bc, fmt_n(peak_of("Canada")), fixed = TRUE)
-  expect_no_match(note_for("British Columbia", "TFWP"), "Reading the IMP mix")  # no IMP, no note
+  expect_no_match(note_for("British Columbia", "TFWP"), "Reading the IMP chart")  # no IMP, no note
 })
 
 test_that("About states the data rules, the IMP subset caveat, event sources and a glossary", {
@@ -195,7 +220,7 @@ test_that("external feedback: YoY shows both programs, merged event label, table
   tr <- render_all("trends", make_sel("Canada", "Both", "Annual"))
   expect_match(tr$yoy_plot, "Both programs", fixed = TRUE)
   expect_match(tr$yoy_title, "both programs (up|down)")
-  expect_match(tr$trend_plot, "2024: study cap & TR target & TFWP limits & PGWP rules", fixed = TRUE)
+  expect_match(tr$trend_plot, "2024: study cap & resident target & TFWP limits & graduate permit rules", fixed = TRUE)
   tf <- render_all("trends", make_sel("Canada", "TFWP", "Annual"))
   expect_no_match(tf$yoy_plot, "Both programs", fixed = TRUE)
   geo <- render_all("geography", make_sel("Canada", "Both", "Annual"))
@@ -205,4 +230,28 @@ test_that("external feedback: YoY shows both programs, merged event label, table
   ov <- render_all("overview", make_sel("Canada", "Both", "Monthly"))
   num <- sub("^\\+", "", ov$kpi_change)                              # e.g. "45.8%"
   expect_match(ov$takeaways, num, fixed = TRUE)                       # same number, same precision
+})
+
+test_that("plain language: no 'YTD', 'took effect' or other jargon in any tab", {
+  jargon <- "YTD|took effect|taking effect|vermillion|by the author|part-year|<br>part\\b|year-to-date|vs a year earlier"
+  for (s in list(make_sel("Canada", "Both", "Annual"), make_sel("British Columbia", "IMP", "Monthly"),
+                 make_sel("Alberta", "TFWP", "Annual", start = "2019-03-01"))) {
+    for (mod in names(SERVERS)) {
+      txt <- paste(unlist(render_all(mod, s)), collapse = " ")
+      expect_no_match(txt, jargon, info = paste(mod, s$geography, s$program_choice))
+    }
+  }
+  ab <- NULL
+  shiny::testServer(function(input, output, session) about_server("x", d, meta), {
+    ab <<- paste(format(output[["x-about"]]), collapse = "")
+  })
+  # IRCC's own file titles ("... became effective") are quoted in Sources; the
+  # explanatory text uses "issued"
+  expect_no_match(ab, jargon)
+  expect_match(ab, "became effective", fixed = TRUE)
+  ui <- as.character(htmltools::renderTags(htmltools::tagList(
+    overview_ui("o"), trends_ui("t"), geography_ui("g"), composition_ui("c"), data_ui("d")))$html)
+  expect_no_match(ui, jargon)
+  # TFWP, IMP, LMIA and PGWP are each defined in plain words in the glossary
+  for (t in c("TFWP", "IMP", "LMIA", "PGWP")) expect_true(t %in% GLOSSARY$term)
 })

@@ -21,7 +21,7 @@ composition_ui <- function(id) {
                           selected = "share", inline = TRUE),
       # Shares of the permits whose program IRCC identifies (leaves out
       # "Unknown International Mobility Program"); off by default.
-      shiny::checkboxInput(ns("known_only"), "IMP shares: known program only", value = FALSE)),
+      shiny::checkboxInput(ns("known_only"), "IMP shares: leave out Unknown IMP", value = FALSE)),
     bslib::layout_columns(
       col_widths = bslib::breakpoints(sm = 12, lg = c(6, 6)),
       chart_card(ns, "share_tfwp", height = "470px"),
@@ -70,21 +70,26 @@ composition_server <- function(id, sel, data, meta, detail = NULL) {
       cols <- CATEGORY_COLOURS[levels(df$category)]
       # The plotted value: the share of the program, or the number of permits
       df$y <- if (as_number) df$value else df$share
-      y_title <- if (as_number) "Work permits that took effect (number)"
-                 else if (known) "Share of IMP permits with a known program (%)"
+      y_title <- if (as_number) "Work permits issued (number)"
+                 else if (known) "Share of IMP permits, Unknown IMP left out (%)"
                  else "Share of the program's permits (%)"
       y_fmt <- if (as_number) ",d" else ".0%"
       if (s$resolution == "Monthly") {
         p <- plotly::plot_ly(df, x = ~period, y = ~y, color = ~category, colors = cols,
                              type = "scatter", mode = "lines", stackgroup = "one",
                              line = list(width = 0.5), text = ~hover, hoverinfo = "text")
-        p <- style_plot(p, "Month", y_title, y_format = y_fmt,
+        # No x-axis title: the years are self-explanatory and a title would
+        # sit on the legend below the chart
+        p <- style_plot(p, NULL, y_title, y_format = y_fmt,
                         hovermode = "closest") |>
           plotly::layout(xaxis = list(tickformat = "%Y", dtick = "M12"))
       } else {
-        # Short axis labels ("2026 YTD" on two lines) so they fit without
+        # Short axis labels (the months of a part year on a second line) so they fit without
         # rotating; the hover text keeps the full label with the months.
-        df$label <- short_year_label(df$label)
+        # When every year covers the same months ("Show only Jan-Jul of each
+        # year"), the months are said once in the source line, not under each bar.
+        same <- length(unique(sub("^\\d{4}", "", df$label))) == 1 && grepl("(", df$label[1], fixed = TRUE)
+        df$label <- if (same) sub(" \\(.*\\)$", "", df$label) else short_year_label(df$label)
         df$label <- factor(df$label, levels = unique(df$label[order(df$period)]))
         p <- plotly::plot_ly(df, x = ~label, y = ~y, color = ~category, colors = cols,
                              type = "bar", text = ~hover, hoverinfo = "text", textposition = "none")
@@ -104,18 +109,24 @@ composition_server <- function(id, sel, data, meta, detail = NULL) {
       if (!prog %in% s$programs) return(sprintf("%s mix over time", prog))
       m <- period_mix() |> dplyr::filter(program == prog)
       if (nrow(m) == 0 || sum(m$value) == 0) return(sprintf("%s mix over time", prog))
-      sprintf("%s: %s was the largest group in the period (%s)", prog,
-              as.character(m$category[1]), fmt_share(m$share[1], 0))
+      # The share is for the whole selected period (all months), so the
+      # period is named in the title.
+      sprintf("%s: the largest category was %s, with %s of %s permits in %s\u2013%s", prog,
+              as.character(m$category[1]), fmt_share(m$share[1], 0), prog,
+              fmt_month_short(s$start), fmt_month_short(s$end))
     }
     output$share_tfwp_title <- shiny::renderText(share_title("TFWP"))
     output$share_imp_title  <- shiny::renderText(share_title("IMP"))
     output$share_tfwp_plot  <- plotly::renderPlotly(share_plot("TFWP"))
     output$share_imp_plot   <- plotly::renderPlotly(share_plot("IMP"))
+    # One sentence when every year shows the same months (sidebar option)
+    months_note <- function() { s <- sel()
+      if (!is.null(s$last_moy)) sprintf("Every year shows January to %s only. ", month.name[s$last_moy]) else "" }
     output$share_tfwp_source <- shiny::renderUI(source_line(meta,
-      extra = "Streams grouped by the author (see the table below)."))
+      extra = paste0(months_note(), "Streams grouped for this dashboard (IRCC's own names are in the table below).")))
     output$share_imp_source <- shiny::renderUI(source_line(meta,
-      extra = if (isTRUE(input$known_only) && !identical(input$measure, "number"))
-        "Shares of permits with a known program." else "Sub-programs grouped by the author (see the table below)."))
+      extra = paste0(months_note(), if (isTRUE(input$known_only) && !identical(input$measure, "number"))
+        "Shares of IMP permits, leaving out Unknown IMP." else "Sub-programs grouped for this dashboard (IRCC's own names are in the table below).")))
 
     # Category totals for the whole period.
     output$mix_title <- shiny::renderText({
@@ -126,9 +137,9 @@ composition_server <- function(id, sel, data, meta, detail = NULL) {
                        fmt_month_short(s$end), s$geography))
       top <- m[which.max(m$value), ]
       # Title states the point: the largest category and its share of all permits.
-      sprintf("%s (%s) was the largest category: %s of permits, %s\u2013%s, %s",
+      sprintf("%s (%s) was the largest category: %s of all permits, %s, %s\u2013%s",
               top$category, top$program, fmt_share(top$value / sum(m$value), 0),
-              fmt_month_short(s$start), fmt_month_short(s$end), s$geography)
+              s$geography, fmt_month_short(s$start), fmt_month_short(s$end))
     })
     output$mix_plot <- plotly::renderPlotly({
       m <- period_mix()
@@ -143,14 +154,14 @@ composition_server <- function(id, sel, data, meta, detail = NULL) {
                            marker = list(color = unname(PROGRAM_COLOURS[m$program])),
                            text = ~fmt_n(value), textposition = "outside", cliponaxis = FALSE,
                            hovertext = ~hover, hoverinfo = "text")
-      style_plot(p, "Work permits that took effect (number)", NULL, legend = FALSE,
+      style_plot(p, "Work permits issued (number)", NULL, legend = FALSE,
                  hovermode = "closest") |>
         plotly::layout(margin = list(l = 330, r = 80),
                        xaxis = list(showgrid = TRUE, gridcolor = "#E5E5E5", tickformat = ",d"),
                        yaxis = list(tickformat = NULL))
     })
     output$mix_source <- shiny::renderUI(source_line(meta,
-      extra = "Blue = TFWP, vermillion = IMP."))
+      extra = "Blue = TFWP, orange = IMP. Totals for the whole selected period."))
 
     # ---- IRCC program names inside each category ----
     detail_tbl <- shiny::reactive({
@@ -176,7 +187,7 @@ composition_server <- function(id, sel, data, meta, detail = NULL) {
       s <- sel()
       if (!"IMP" %in% s$programs) return(NULL)
       htmltools::div(class = "alert alert-info caveat", role = "note",
-        htmltools::tags$strong("Reading the IMP mix: "),
+        htmltools::tags$strong("Reading the IMP chart: "),
         # Figures for the selected geography, full calendar years (see
         # unknown_imp_note_text() in R/calc.R); updates when the geography changes.
         unknown_imp_note_text(data, as.character(s$geography), meta$latest_month))

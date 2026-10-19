@@ -57,7 +57,7 @@ trends_server <- function(id, sel, data, meta) {
       }
       ser <- ser[order(ser$period), ]
       ser$hover <- sprintf("%s: %s%s", ser$program, fmt_n(ser$value),
-                           ifelse(ser$partial, " (part-year, not comparable with full years)", ""))
+                           ifelse(ser$partial, " (part of the year only, not comparable with full years)", ""))
       p <- plotly::plot_ly()
       # One line per program. Each trace gets its own data frame via `data =`
       # and formulas (~), because plotly evaluates arguments lazily and a
@@ -75,10 +75,9 @@ trends_server <- function(id, sel, data, meta) {
           text = ~hover, hoverinfo = "text")
       }
       p <- style_plot(p,
-        if (s$resolution == "Monthly") "Month the permit took effect"
-        else "Year the permit took effect",
-        if (s$resolution == "Monthly") "Work permits (number per month)"
-        else "Work permits (number per year)",
+        if (s$resolution == "Monthly") "Month issued" else "Year issued",
+        if (s$resolution == "Monthly") "Work permits issued per month"
+        else "Work permits issued per year",
         x_type = if (s$resolution == "Monthly") "date" else "category") |>
         # Legend above the chart (never collides with long year labels) and
         # headroom at the top (50% monthly, 35% annual) so the event notes never sit on a line.
@@ -127,8 +126,8 @@ trends_server <- function(id, sel, data, meta) {
       ev <- KEY_EVENTS[KEY_EVENTS$date >= s$start & KEY_EVENTS$date <= s$end, ]
       source_line(meta,
         extra = htmltools::tagList(
-          if (!is.null(s$last_moy)) sprintf("Same months (Jan\u2013%s) of every year. ", month.abb[s$last_moy])
-          else if (s$resolution == "Annual") "Open circles are part-years. ",
+          if (!is.null(s$last_moy)) sprintf("Every year shows January to %s only. ", month.name[s$last_moy])
+          else if (s$resolution == "Annual") "Open circles cover only part of a year. ",
           event_notes_html(ev)))
     })
     # ---- Year-over-year change ----
@@ -154,7 +153,7 @@ trends_server <- function(id, sel, data, meta) {
       y$program <- factor(ifelse(y$program == "Total", "Both programs", y$program),
                           levels = c("TFWP", "IMP", "Both programs"))
       y$program <- droplevels(y$program)
-      y$hover <- sprintf("%s %s: %s (%s vs %s)", y$program, y$label, fmt_pct(y$yoy),
+      y$hover <- sprintf("%s %s: %s (%s, a year earlier %s)", y$program, y$label, fmt_pct(y$yoy),
                          fmt_n(y$value), fmt_n(y$prev_value))
       yoy_cols <- c(TFWP = PROGRAM_COLOURS[["TFWP"]], IMP = PROGRAM_COLOURS[["IMP"]],
                     `Both programs` = PROGRAM_COLOURS[["Total"]])[levels(y$program)]
@@ -162,7 +161,7 @@ trends_server <- function(id, sel, data, meta) {
         p <- plotly::plot_ly(y, x = ~period, y = ~yoy, color = ~program,
                              colors = yoy_cols,
                              type = "scatter", mode = "lines", text = ~hover, hoverinfo = "text")
-        p <- style_plot(p, "Month", "Change vs a year earlier", y_format = ".0%") |>
+        p <- style_plot(p, "Month", "Change from a year earlier (%)", y_format = ".0%") |>
           plotly::layout(xaxis = list(tickformat = "%Y", dtick = "M12"),
                          yaxis = list(rangemode = "normal"))
       } else {
@@ -170,13 +169,13 @@ trends_server <- function(id, sel, data, meta) {
         p <- plotly::plot_ly(y, x = ~label, y = ~yoy, color = ~program,
                              colors = yoy_cols, type = "bar",
                              text = ~hover, hoverinfo = "text", textposition = "none")
-        p <- style_plot(p, "Year the permit took effect",
-                        "Change vs a year earlier", y_format = ".0%", x_type = "category") |>
+        p <- style_plot(p, "Year issued",
+                        "Change from a year earlier (%)", y_format = ".0%", x_type = "category") |>
           plotly::layout(barmode = "group", yaxis = list(rangemode = "normal"))
       }
       p
     })
     output$yoy_source <- shiny::renderUI(source_line(meta,
-      extra = "Part-years are compared with the same months a year earlier."))
+      extra = "Each year is compared with the year before; a part year, such as 2026 (January to July), with the same months a year earlier."))
   })
 }

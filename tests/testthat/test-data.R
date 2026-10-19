@@ -32,8 +32,8 @@ test_that("annual figures equal the sum of monthly figures (flow measure)", {
   manual <- aggregate(value ~ year + program, data = sel, FUN = sum)
   m <- merge(ann, manual, by = c("year", "program"))
   expect_equal(m$value.x, m$value.y)
-  expect_true(any(grepl("YTD", ann$label)))           # latest year is YTD
-  expect_true(all(ann$partial[grepl("YTD", ann$label)]))
+  expect_true(any(grepl("^2026 \\(Jan", ann$label)))   # latest year is labelled with its months
+  expect_true(all(ann$partial[grepl("^2026 \\(Jan", ann$label)]))
 })
 
 test_that("Canada equals the sum of provinces, territories and 'not stated' (within rounding)", {
@@ -116,7 +116,7 @@ test_that("a new month in the IRCC files extends the data, slider and latest mon
   expect_equal(length(month_choices(b$data)), length(month_choices(d)) + 1)
   ann <- summarise_series(filter_selection(b$data, "2026-01-01", b$meta$latest_month),
                           "Annual", by = character(0), latest_month = b$meta$latest_month)
-  expect_match(ann$label, "YTD \\(Jan\u2013Aug\\)")
+  expect_equal(ann$label, "2026 (Jan\u2013Aug)")
 })
 
 test_that("the cache is written after a successful read when requested", {

@@ -68,5 +68,5 @@ test_that("the app shows a damaged download as saved data with the right totals"
   bar <- gsub("\\s+", " ", app$get_text(".status-bar"))
   expect_match(bar, "Using saved data")
   expect_match(bar, "did not match the checked copy")
-  expect_equal(app$get_value(output = "overview-kpi_total"), "6,417,305")
+  expect_equal(app$get_value(output = "overview-kpi_ytd"), "673,280")
 })

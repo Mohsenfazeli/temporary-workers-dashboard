@@ -55,7 +55,7 @@ test_that("edge case: a range inside 2026 only is year-to-date and compared with
   ytd <- filter_selection(d, "2026-01-01", latest, "Canada", "IMP")
   ann <- summarise_series(ytd, "Annual", latest_month = latest)
   expect_equal(nrow(ann), 1)
-  expect_match(ann$label, "2026 YTD \\(Jan\u2013Jul\\)")
+  expect_equal(ann$label, "2026 (Jan\u2013Jul)")
   y <- yoy_series(d[d$geography == "Canada" & d$program == "IMP", ], "2026-01-01", latest,
                   "Annual", latest_month = latest)
   jan_jul_2025 <- sum(d$value[d$geography == "Canada" & d$program == "IMP" &
@@ -126,18 +126,18 @@ test_that("download table matches the selection and resolution", {
   a <- table_for_download(sel, "Annual", latest, "Alberta")
   expect_equal(nrow(m), 12 * 12)
   expect_equal(nrow(a), 12)
-  expect_equal(sum(m$`Work permits that took effect`), sum(a$`Work permits that took effect`))
-  expect_equal(sum(a$`Work permits that took effect`), kpi_total(sel))
+  expect_equal(sum(m$`Work permits issued`), sum(a$`Work permits issued`))
+  expect_equal(sum(a$`Work permits issued`), kpi_total(sel))
 })
 
 test_that("takeaways and titles are plain sentences with thousands separators", {
   tk <- make_takeaways(d, "2015-01-01", latest, "Canada", "Both")
   expect_length(tk, 5)
-  expect_match(tk[1], "^[0-9]{1,3}(,[0-9]{3})+ TFWP and IMP work permits took effect")
+  expect_match(tk[1], "^[0-9]{1,3}(,[0-9]{3})+ TFWP and IMP work permits were issued across Canada from January 2015 to July 2026, an average of [0-9,]+ a month\\. These are permits, not people")
   expect_match(trend_title(filter_selection(d, "2015-01-01", latest), "Canada", "Both"),
-               "the last 12 months were [0-9]+\\.[0-9]% (above|below) the first 12 months selected$")
+               "the last 12 months were [0-9]+\\.[0-9]% (higher|lower) than the first 12 months selected$")
   expect_match(trend_title(filter_selection(d, "2026-01-01", latest), "Canada", "Both"),
-               "Jul 2026 was ([0-9]+\\.[0-9]% (above|below)|about the same as) Jan 2026$")
+               "Jul 2026 was ([0-9]+\\.[0-9]% (higher|lower) than|about the same as) Jan 2026$")
 })
 
 test_that("takeaways tell a story: peak and change since, year to date, mix, where", {
@@ -239,7 +239,7 @@ test_that("trend title: same precision as the change card, and the annual view c
   full <- ann[names(ann) < format(latest, "%Y")]
   ch <- unname(full[length(full)] / full[1] - 1)
   expect_equal(trend_title(sel, "Canada", "Both", "Annual", latest),
-               sprintf("TFWP and IMP permits in Canada: %s was %s above %s (%s YTD (Jan\u2013%s) shown separately)",
+               sprintf("Work permits in Canada (TFWP and IMP): %s was %s higher than %s; %s covers Jan\u2013%s only",
                        names(full)[length(full)], sub("^\\+", "", fmt_pct(ch)), names(full)[1],
                        format(latest, "%Y"), month.abb[as.integer(format(latest, "%m"))]))
   # Fewer than two full years in the Annual view: falls back to the month rule
@@ -255,7 +255,7 @@ test_that("takeaways say 'so far' only for a true year to date", {
   expect_true(any(grepl("^In the selected months of 2026 \\(Mar\u2013", m)))
   # The figure is the selected months vs the same months a year earlier
   cur <- sum(d$value[d$geography == "Canada" & d$month >= as.Date("2025-01-01") & d$month <= as.Date("2025-07-01")])
-  expect_true(any(grepl(paste0(fmt_n(cur), " permits took effect"), h, fixed = TRUE)))
+  expect_true(any(grepl(paste0(fmt_n(cur), " permits were issued"), h, fixed = TRUE)))
 })
 
 test_that("year-over-year title names each program and the combined total, from the data", {
@@ -270,7 +270,7 @@ test_that("year-over-year title names each program and the combined total, from 
   yr <- as.integer(format(latest, "%Y"))
   w <- function(pr) { ch <- ytd(pr, yr) / ytd(pr, yr - 1) - 1
                       paste(dir_word(ch), sub("^[+-]", "", fmt_pct(ch))) }
-  expect_equal(t, sprintf("%s YTD (Jan\u2013%s): IMP %s, TFWP %s (both programs %s) vs a year earlier",
+  expect_equal(t, sprintf("%s (Jan\u2013%s) compared with the same months a year earlier: IMP %s, TFWP %s, both programs %s",
                           yr, month.abb[as.integer(format(latest, "%m"))], w("IMP"), w("TFWP"), w("Total")))
   one <- yoy_series(cn[cn$program == "TFWP", ], "2015-01-01", latest, "Annual", latest_month = latest)
   expect_no_match(yoy_title_text(one), "both programs")
@@ -285,8 +285,8 @@ test_that("chart colours have at least 3:1 contrast with the white background", 
 })
 
 test_that("short axis labels for crowded year axes", {
-  expect_equal(short_year_label(c("2015", "2026 YTD (Jan\u2013Jul)", "2015 (Mar\u2013Dec)")),
-               c("2015", "2026<br>YTD", "2015<br>part"))
+  expect_equal(short_year_label(c("2015", "2026 (Jan\u2013Jul)", "2015 (Mar\u2013Dec)")),
+               c("2015", "2026<br>Jan\u2013Jul", "2015<br>Mar\u2013Dec"))
 })
 
 test_that("the Unknown-IMP note uses the selected geography and handles edge cases", {

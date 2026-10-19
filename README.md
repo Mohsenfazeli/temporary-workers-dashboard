@@ -27,7 +27,7 @@ No other data source is used: every figure in the dashboard comes from these two
 How the data are handled:
 - The date range, year list and latest month are taken from the data, so a new IRCC month appears without code changes.
 - Values IRCC suppresses for privacy ("--", 0–5) count as 0 and are flagged; figures where they could add more than 10% are marked "Possible undercount".
-- Counts are permits that took effect, not people or new arrivals; they include permits for people already in Canada (extensions and changes of status), so they can rise while arrivals fall (IRCC, Supplementary Information for the 2026–2028 Immigration Levels Plan).
+- Counts are work permits issued (IRCC's wording: permits that "became effective", i.e. signed and given to the person), not people or new arrivals; they include permits for people already in Canada (extensions and changes of status), so they can rise while arrivals fall (IRCC, Supplementary Information for the 2026–2028 Immigration Levels Plan).
 - Dotted lines on the Trends charts mark six dated policy events, each linked to its official Government of Canada source. They are context only and do not imply cause.
 - "Same months each year" (Annual view) compares January to July of every year with 2026.
 
