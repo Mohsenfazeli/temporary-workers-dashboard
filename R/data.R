@@ -1,7 +1,7 @@
 # =============================================================================
 # R/data.R: live download, cleaning and validation of the two IRCC files
 # -----------------------------------------------------------------------------
-# Question 1, Temporary Workers dashboard (BC ECON 24R, REQ 125819)
+# Temporary Workers in Canada dashboard
 #
 # What this file does, in order:
 #   1. Downloads both IRCC open-data CSVs straight from their URLs (live).
@@ -50,7 +50,7 @@ suppressPackageStartupMessages({
 
 # ---- 1. Constants -----------------------------------------------------------
 
-# The two official data sources named in the assignment (and nothing else).
+# The two official IRCC open data files (and nothing else).
 IRCC_URLS <- c(
   TFWP = "https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-TFWP-PT_program.csv",
   IMP  = "https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-IMP-PT_program.csv"
@@ -611,6 +611,10 @@ load_release <- function(path = file.path("data", "baseline.rds"), release = REL
   b$meta$retrieved_at    <- release$downloaded
   b$meta$source_label    <- sprintf("IRCC open data release of %s", fmt_date(release$date))
   b$meta$release_evidence <- release$evidence
+  # The one phrase used everywhere for the data shown (header, About, Overview,
+  # source lines and the written notes), e.g. "IRCC open data release of
+  # September 15, 2026 (data to July 2026)".
+  b$meta$release_phrase <- sprintf("%s (data to %s)", b$meta$source_label, fmt_month(b$meta$latest_month))
   b$meta$warning <- NULL; b$meta$cache_note <- NULL
   b
 }

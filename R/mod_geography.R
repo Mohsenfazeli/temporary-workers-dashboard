@@ -1,6 +1,6 @@
 # =============================================================================
 # R/mod_geography.R: Geography tab (ranking, share of Canada, growth,
-# comparison of one province/territory with Canada)
+# comparison of one province/territory with Canada, contribution to change)
 # =============================================================================
 required_packages <- c("shiny", "bslib", "plotly", "DT", "jsonlite")
 missing_packages  <- required_packages[
@@ -25,7 +25,9 @@ geography_ui <- function(id) {
         bslib::card_footer(shiny::uiOutput(ns("table_source")))
       )
     ),
-    chart_card(ns, "compare", height = "340px")
+    chart_card(ns, "compare", height = "340px"),
+    # Each province/territory's part of Canada's latest year-to-date change
+    chart_card(ns, "contrib", height = "380px")
   )
 }
 
@@ -203,6 +205,48 @@ geography_server <- function(id, sel, data, meta) {
                  "Change vs a year earlier (%)", y_format = ".0%", x_type = "category") |>
         plotly::layout(barmode = "group", yaxis = list(rangemode = "normal"))
     })
+    # ---- Contribution to change: latest year to date vs same months a year earlier ----
+    # Follows the program filter; the period is fixed (the latest year to date,
+    # as on the Overview card), so it does not use the date slider.
+    contrib <- shiny::reactive(contribution_to_change(data, meta$latest_month, sel()$programs))
+    output$contrib_title <- shiny::renderText({
+      x <- contrib(); s <- sel(); ch <- attr(x, "canada_change")
+      if (is.na(ch) || ch == 0) return(sprintf("Contribution to Canada's change in %s permits, %s",
+                                               program_label(s$program_choice), attr(x, "label")))
+      word <- if (ch > 0) "increase" else "decrease"
+      tx <- sprintf("%s accounted for %s of Canada's %s in %s permits, %s",
+                    x$geography[1], fmt_share(x$contribution[1]), word,
+                    program_label(s$program_choice), attr(x, "label"))
+      if (s$geography != "Canada" && s$geography != x$geography[1]) {
+        i <- match(s$geography, x$geography)
+        tx <- paste0(tx, "; ", s$geography, ": ", fmt_share(x$contribution[i]))
+      }
+      tx
+    })
+    output$contrib_plot <- plotly::renderPlotly({
+      x <- contrib(); s <- sel()
+      if (all(is.na(x$contribution))) return(empty_plot("Canada's total did not change, so shares of the change are not defined"))
+      x <- x[order(x$contribution), ]
+      x$geography <- factor(x$geography, levels = x$geography)
+      highlight <- x$geography == s$geography
+      x$hover <- sprintf("%s<br>%s: %s permits (%s a year earlier)<br>Change: %s<br>Share of Canada's change: %s",
+                         x$geography, attr(x, "label"), fmt_n(x$value), fmt_n(x$prev_value),
+                         fmt_n(x$change), fmt_share(x$contribution))
+      p <- plotly::plot_ly(x, y = ~geography, x = ~contribution, type = "bar", orientation = "h",
+                           marker = list(color = ifelse(highlight, GOV_GOLD, GOV_BLUE),
+                                         line = list(color = ifelse(highlight, "#7A5A00", GOV_BLUE), width = 1)),
+                           text = ~fmt_share(contribution), textposition = "outside", cliponaxis = FALSE,
+                           hovertext = ~hover, hoverinfo = "text")
+      rng <- range(c(0, x$contribution), na.rm = TRUE)
+      style_plot(p, "Share of Canada's change (%)", NULL, legend = FALSE, hovermode = "closest") |>
+        plotly::layout(xaxis = list(tickformat = ".0%", range = c(min(rng[1] * 1.3, 0), rng[2] * 1.25)),
+                       yaxis = list(title = NULL, tickformat = NULL), margin = list(l = 170, r = 40))
+    })
+    output$contrib_source <- shiny::renderUI(source_line(meta, extra = paste0(
+      "Share of Canada's change = the province or territory's change ÷ Canada's change, ",
+      attr(contrib(), "label"), " (same months as the Overview card; the date slider does not apply). ",
+      "Canada includes permits with no province/territory stated, which are not listed, so the shares do not add to exactly 100%.")))
+
     output$compare_source <- shiny::renderUI({
       s <- sel()
       source_line(meta, extra = if (s$geography == "Canada")

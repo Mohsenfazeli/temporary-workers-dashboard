@@ -1,12 +1,12 @@
 # =============================================================================
 # app.R: Temporary Workers in Canada, interactive dashboard (R Shiny)
 # -----------------------------------------------------------------------------
-# Question 1, BC ECON 24R written assignment (REQ 125819).
-# Run locally with: shiny::runApp()   (the IRCC data download automatically)
+# Run locally with: shiny::runApp()   (the IRCC open data release of September 15,
+# 2026 (data to July 2026) is included in data/baseline.rds; no download needed)
 #
 # Structure:
-#   R/data.R        live download, cleaning, validation against a verified
-#                   baseline copy, cache (load_data)
+#   R/data.R        the included IRCC release (load_release); optional live
+#                   download, cleaning, checks against the release, cache (load_data)
 #   R/calc.R        all calculations (testable, no Shiny code)
 #   R/theme.R       colours, fonts, chart helpers, source lines
 #   R/mod_*.R       one Shiny module per tab
@@ -70,7 +70,7 @@ status_bar <- htmltools::div(
   if (identical(META$source, "release")) {
     # Default: the frozen release, labelled plainly with IRCC's release date
     htmltools::tags$span(htmltools::tags$strong("Data: "),
-      paste0(META$source_label, " (", fmt_month(META$first_month), " to ", fmt_month(META$latest_month), ")"))
+      META$release_phrase)   # e.g. "IRCC open data release of September 15, 2026 (data to July 2026)"
   } else {
     htmltools::tags$span(htmltools::tags$strong("Data last retrieved: "),
                          fmt_datetime(META$retrieved_at))

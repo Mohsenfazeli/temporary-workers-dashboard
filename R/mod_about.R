@@ -73,16 +73,16 @@ about_server <- function(id, data, meta) {
         bslib::card(
           bslib::card_header(tags$h2(class = "chart-title", "What this dashboard shows")),
           bslib::card_body(
-            tags$p("This dashboard shows how many temporary foreign workers had a Canadian work permit take effect each month, by province or territory and by program."),
+            tags$p("This dashboard shows how many work permits took effect each month under Canada's two temporary foreign worker programs, by province or territory and by program."),
             tags$div(class = "alert alert-light border py-2 px-3 small",
               tags$strong("Data used: "), "every figure comes from the two IRCC open data files (CSV) for TFWP and IMP listed under Sources. ",
               if (identical(meta$source, "release")) htmltools::tagList(
-                "The dashboard shows a fixed copy of the ", tags$strong(meta$source_label),
-                " (data to ", fmt_month(meta$latest_month), "), downloaded ", fmt_date(meta$retrieved_at),
+                "The dashboard shows a fixed copy of the ", tags$strong(meta$release_phrase),
+                ", downloaded ", fmt_date(meta$retrieved_at),
                 ". The release date is from ", meta$release_evidence, ". ",
                 "A fixed release means every visitor sees the same, checked numbers. ",
                 "Maintainers can switch to a live read of IRCC's files (environment variable TW_DATA_SOURCE = live); a live download is used only if it matches this release for months more than a year old. "),
-              "No other data source is used."),
+              "No other data source is used: these two files are IRCC's official monthly series for both programs by province or territory, so every figure can be traced to one public, dated source and checked by anyone."),
             tags$h3("The two programs"),
             tags$ul(
               tags$li(tags$strong("Temporary Foreign Worker Program (TFWP): "),
@@ -102,7 +102,7 @@ about_server <- function(id, data, meta) {
               tags$li("Period: ", first_tx, " to ", latest_tx, " (latest month available)."),
               tags$li("Geography: Canada, the 10 provinces and 3 territories. Canada also includes permits with no province or territory stated; that group is not ranked."),
               if (identical(meta$source, "release"))
-                tags$li("Data: ", meta$source_label, ", downloaded ", fmt_datetime(meta$retrieved_at),
+                tags$li("Data: ", meta$release_phrase, ", downloaded ", fmt_datetime(meta$retrieved_at),
                         ". IRCC updates the files monthly; this copy is refreshed when the dashboard is redeployed.")
               else tags$li("Data last retrieved: ", fmt_datetime(meta$retrieved_at),
                       " (", meta$source_label, "). IRCC updates the files monthly."),

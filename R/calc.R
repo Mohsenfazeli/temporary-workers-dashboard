@@ -358,6 +358,33 @@ geo_ranking <- function(data, start, end, programs) {
     mutate(rank = row_number())
 }
 
+#' Contribution to change (Geography tab): each province or territory's part
+#' of Canada's change in the latest year to date compared with the same months
+#' a year earlier (e.g. Jan-Jul 2026 vs Jan-Jul 2025), for the selected programs.
+#' contribution = province change / Canada change. Canada includes permits with
+#' no province/territory stated, which are not listed, so the parts add up to
+#' slightly less (or more) than 100%. Uses kpi_ytd_compare(), the same rule as
+#' the Overview year-to-date card.
+#' @return one row per province/territory (largest contribution first), with
+#'   attributes `label` (period wording) and `canada_change`.
+contribution_to_change <- function(data, latest_month, programs) {
+  geos <- unique(as.character(data$geography[data$geo_type == "province/territory"]))
+  ca <- kpi_ytd_compare(data, latest_month, "Canada", programs)
+  ca_change <- ca$value - ca$prev_value
+  out <- do.call(rbind, lapply(geos, function(g) {
+    k <- kpi_ytd_compare(data, latest_month, g, programs)
+    data.frame(geography = g, value = k$value, prev_value = k$prev_value,
+               change = k$value - k$prev_value, stringsAsFactors = FALSE)
+  }))
+  # Undefined when Canada did not change (or there is no year-earlier period)
+  out$contribution <- if (isTRUE(ca_change != 0)) out$change / ca_change else NA_real_
+  out <- out[order(-out$contribution, -out$change), ]
+  rownames(out) <- NULL
+  attr(out, "label") <- ca$label
+  attr(out, "canada_change") <- ca_change
+  out
+}
+
 #' Share of Canada's permits over time for the largest provinces/territories
 #' (used on the Geography tab when "Canada" is selected).
 #' @param top how many provinces/territories to show (largest in the period)

@@ -132,7 +132,7 @@ test_that("the cache is written after a successful read when requested", {
 
 # ---- Only the two IRCC CSV files are used ----
 
-test_that("the data come only from the two IRCC CSV files named in the assignment", {
+test_that("the data come only from the two IRCC CSV files", {
   expect_setequal(names(formals(load_data)),
                   c("sources", "cache_path", "baseline_path", "timeout", "tries",
                     "source_label", "retrieved_at", "write_cache"))

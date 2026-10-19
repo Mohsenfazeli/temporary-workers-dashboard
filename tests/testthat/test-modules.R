@@ -18,7 +18,8 @@ OUTPUTS <- list(
                "kpi_split_title", "kpi_split_sub", "kpi_change_title",
                "kpi_year", "kpi_year_title", "kpi_year_sub", "highlights"),
   trends = c("trend_title", "trend_plot", "yoy_title", "yoy_plot", "trend_source"),
-  geography = c("rank_title", "rank_plot", "rank_table", "compare_title", "compare_plot"),
+  geography = c("rank_title", "rank_plot", "rank_table", "compare_title", "compare_plot",
+                "contrib_title", "contrib_plot"),
   composition = c("share_tfwp_title", "share_tfwp_plot", "share_imp_title", "share_imp_plot",
                   "mix_title", "mix_plot", "unknown_note", "detail_title", "detail_table"),
   data = c("title", "table")
@@ -84,7 +85,10 @@ test_that("the date-range slider changes every chart and title", {
     charts <- grep("plot|table|title$|^kpi_total$", names(a), value = TRUE)
     # KPI card labels (e.g. "Split: IMP vs TFWP") name what is measured, not
     # the value, so they rightly stay the same when only the dates change
-    charts <- setdiff(charts, c("kpi_split_title", "kpi_change_title"))
+    charts <- setdiff(charts, c("kpi_split_title", "kpi_change_title",
+    # The contribution chart always compares the latest year to date with the
+    # same months a year earlier (as the Overview card), so it ignores the slider
+                                "contrib_title", "contrib_plot"))
     expect_true(all(charts %in% changed), info = paste(mod, "unchanged:",
                 paste(setdiff(charts, changed), collapse = ", ")))
   }
@@ -173,7 +177,7 @@ test_that("About states the data rules, the IMP subset caveat, event sources and
   shiny::testServer(function(input, output, session) about_server("x", d, meta), {
     ab <<- paste(format(output[["x-about"]]), collapse = "")
   })
-  expect_match(ab, "two")                                       # two assignment CSV files
+  expect_match(ab, "two")                                       # the two IRCC CSV files
   expect_match(ab, "subset", ignore.case = TRUE)
   expect_match(ab, "preliminary", ignore.case = TRUE)
   expect_match(ab, "Glossary")

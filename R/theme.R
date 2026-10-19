@@ -113,7 +113,7 @@ empty_plot <- function(message) {
 # the details are in About the data.
 data_date_text <- function(meta) {
   if (!is.null(meta$release_date) && identical(meta$source, "release"))
-    paste0("release of ", fmt_date(meta$release_date))
+    paste0("release of ", fmt_date(meta$release_date), " (data to ", fmt_month(meta$latest_month), ")")
   else paste0("retrieved ", fmt_date(meta$retrieved_at))   # Windows-safe helper (R/calc.R)
 }
 source_line <- function(meta, extra = NULL) {

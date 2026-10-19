@@ -1,4 +1,4 @@
-# Temporary Workers in Canada: R Shiny dashboard (ECON 24R, Question 1)
+# Temporary Workers in Canada: R Shiny dashboard
 
 An interactive dashboard of temporary work permits by province/territory and program (TFWP and IMP), from January 2015 to the latest month IRCC has published.
 
@@ -13,7 +13,7 @@ An interactive dashboard of temporary work permits by province/territory and pro
 3. Start the app: `shiny::runApp()` (if the shiny package isn't installed yet, run `install.packages("shiny")` first). A browser tab opens. On first run every script installs any missing packages itself from CRAN as ready-made binaries, so no compiler (e.g. Rtools on Windows) is needed.
 4. Optional, only if you want the exact package versions used to build it: `install.packages("renv"); renv::restore()`. This can take much longer, and on Windows it may need Rtools if an exact version is only available as source code.
 
-By default the app shows a fixed IRCC release: the two IRCC files as published on September 15, 2026 (January 2015 to July 2026), saved in `data/baseline.rds`. The header says "Data: IRCC open data release of September 15, 2026". The date is IRCC's own: the files' Last-Modified date on the IRCC server and the "date modified" in the Open Government catalogue, both checked on October 18, 2026. Every visitor sees the same numbers, so the figures match the written notes.
+By default the app shows a fixed IRCC release: the two IRCC files as published on September 15, 2026 (January 2015 to July 2026), saved in `data/baseline.rds`. The header says "Data: IRCC open data release of September 15, 2026 (data to July 2026)". The date is IRCC's own: the files' Last-Modified date on the IRCC server and the "date modified" in the Open Government catalogue, both checked on October 18, 2026. Every visitor sees the same numbers, so the figures match the written notes.
 
 Live refresh is an option for maintainers: start the app with `TW_DATA_SOURCE=live` and it downloads the IRCC files at startup. If the IRCC website can't be reached, IRCC changes its file layout, or a download does not match the verified copy for months older than 12 months, the app uses the saved copy in `data/cache.rds` and says so in the header. The cache is only overwritten by a download that passes every check.
 

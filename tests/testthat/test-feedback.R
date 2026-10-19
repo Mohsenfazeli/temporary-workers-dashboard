@@ -14,7 +14,9 @@ test_that("the frozen release is labelled with IRCC's release date and has no wa
   expect_null(r$meta$warning)
   expect_equal(r$data, readRDS(BASELINE)$data)
   expect_equal(r$data, d)                                  # same numbers as the IRCC files
-  expect_match(data_date_text(r$meta), "release of September 15, 2026")
+  expect_match(data_date_text(r$meta), "release of September 15, 2026 (data to July 2026)", fixed = TRUE)
+  # One release phrase everywhere (header, About, Overview, written notes)
+  expect_equal(r$meta$release_phrase, "IRCC open data release of September 15, 2026 (data to July 2026)")
   expect_error(load_release(tempfile()), "not found")
 })
 
@@ -109,7 +111,8 @@ test_that("no on-screen text refers to the assignment", {
     ab <<- paste(format(output[["x-about"]]), collapse = "")
   })
   expect_no_match(ab, "assignment", ignore.case = TRUE)
-  expect_match(ab, "IRCC open data release of September 15, 2026", fixed = TRUE)
+  expect_match(ab, "IRCC open data release of September 15, 2026 (data to July 2026)", fixed = TRUE)
+  expect_match(ab, "these two files are IRCC's official monthly series", fixed = TRUE)
   expect_match(ab, "supplementary-immigration-levels-2026-2028", fixed = TRUE)
   expect_no_match(ab, "xlsx|Excel|distinct people per year", ignore.case = TRUE)
 })
@@ -121,7 +124,7 @@ test_that("the app opens on the frozen release by default, with the right cards 
   app <- AppDriver$new(PROJECT, load_timeout = 90000, timeout = 30000, width = 1366, height = 900)
   on.exit(app$stop())
   bar <- gsub("\\s+", " ", app$get_text(".status-bar"))
-  expect_match(bar, "Data: IRCC open data release of September 15, 2026 (January 2015 to July 2026)", fixed = TRUE)
+  expect_match(bar, "Data: IRCC open data release of September 15, 2026 (data to July 2026)", fixed = TRUE)
   expect_no_match(bar, "Using saved data")
   expect_equal(app$get_value(output = "overview-kpi_year_title"), "Work permits in 2025 (full year)")
   expect_equal(app$get_value(output = "overview-kpi_year"), "754,915")
@@ -133,4 +136,26 @@ test_that("the app opens on the frozen release by default, with the right cards 
   app$set_inputs(same_months = TRUE); app$wait_for_idle(800)
   expect_match(app$get_value(output = "overview-headline_title"), "(Jan\u2013Jul)", fixed = TRUE)
   expect_no_match(app$get_value(output = "overview-headline_title"), "shown separately")
+})
+
+test_that("contribution to change: B.C.'s part of Canada's Jan-Jul 2026 increase is 12.1%", {
+  x <- contribution_to_change(d, latest, both)
+  expect_equal(attr(x, "label"), "Jan\u2013Jul 2026 vs Jan\u2013Jul 2025")
+  expect_equal(attr(x, "canada_change"), 673280 - 461760)
+  bc <- x[x$geography == "British Columbia", ]
+  expect_equal(c(bc$value, bc$prev_value), c(109805, 84165))
+  expect_equal(fmt_share(bc$contribution), "12.1%")
+  expect_equal(x$geography[1], "Ontario"); expect_equal(fmt_share(x$contribution[1]), "52.9%")
+  expect_equal(nrow(x), 13)                                 # provinces and territories only
+  # Independent check with base R: province change / Canada change
+  ytd <- function(g, y) sum(d$value[d$geography == g & d$year == y & as.integer(format(d$month, "%m")) <= 7])
+  expect_equal(bc$contribution, (ytd("British Columbia", 2026) - ytd("British Columbia", 2025)) /
+                 (ytd("Canada", 2026) - ytd("Canada", 2025)))
+  # The 13 parts plus "not stated" add up to Canada's change
+  ns <- ytd("Province/territory not stated", 2026) - ytd("Province/territory not stated", 2025)
+  expect_equal(sum(x$change) + ns, attr(x, "canada_change"))
+  # A decrease (TFWP) is shared out the same way; B.C. has the largest part
+  tf <- contribution_to_change(d, latest, "TFWP")
+  expect_lt(attr(tf, "canada_change"), 0)
+  expect_equal(tf$geography[1], "British Columbia")
 })

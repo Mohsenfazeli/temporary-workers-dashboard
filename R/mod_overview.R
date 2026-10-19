@@ -178,8 +178,8 @@ overview_server <- function(id, sel, data, meta) {
       tx <- release_highlights(data, meta$latest_month)
       htmltools::tagList(
         htmltools::tags$p(class = "highlights-date",
-          htmltools::tags$strong(paste0("Canada, ", meta$source_label %||% "IRCC open data",
-                                        " (data to ", fmt_month(meta$latest_month), ")"))),
+          htmltools::tags$strong(paste0("Canada, ", meta$release_phrase %||%
+                                          paste0("IRCC open data (data to ", fmt_month(meta$latest_month), ")")))),
         htmltools::tags$ul(class = "takeaways", lapply(tx, htmltools::tags$li)),
         htmltools::tags$p(class = "source-line", IN_CANADA_NOTE$text, " Source: ",
           htmltools::tags$a(href = IN_CANADA_NOTE$url, target = "_blank", IN_CANADA_NOTE$source, .noWS = "after"), "."))
