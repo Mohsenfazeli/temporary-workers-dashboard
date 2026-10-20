@@ -4,7 +4,7 @@
 #     (Appendix D), tables and appendix lines; the dated context line on the
 #     byline and the figure date are the only differences.
 #  2. On simulated newer releases (copies of the data with changed numbers;
-#     test data only) the wording rules switch, the title falls back, and no
+#     test data only) the wording rules switch, the title carries the build date, and no
 #     stale period ("July 2026", "Jan–Jul") is left.
 #  3. The tab's content, the files and the mismatch notice; the running app.
 for (f in list.files(file.path(PROJECT, "exports", "R"), pattern = "\\.R$", full.names = TRUE)) source(f, local = FALSE)
@@ -124,15 +124,15 @@ test_that("a newer release (one more month, same story) updates every period", {
   expect_match(refs$citation[1], "release of October 15, 2026 (data to August 2026)", fixed = TRUE)
 })
 
-test_that("when the story changes, the wording rules switch and the title falls back", {
+test_that("when the story changes, the wording rules switch and the title carries the build date", {
   # 2026 months scaled down: permits fall from a year earlier, PGWPs fall
   b <- simulate_release(SEP15, "2026-08-01", "2026-10-15", scale = function(d)
     ifelse(d$year == 2026, round(d$value * ifelse(d$category == Q2_PGWP, 0.25, 0.55)), d$value))
   tx <- q2_note_text(q2_facts(b), b, as.Date("2026-10-20"))
   h <- setNames(tx$rules$holds, tx$rules$rule)
   expect_false(h[["rebound"]]); expect_false(h[["pgwp_drive"]]); expect_false(h[["pgwp_rose"]])
-  expect_false(h[["bc_share_small"]]); expect_false(h[["title_storyline"]]); expect_false(h[["bc_growth_all_graduates"]])
-  expect_identical(tx$paras[1], "Work permits in Canada and B.C., January\u2013August 2026")
+  expect_false(h[["bc_share_small"]]); expect_false(h[["bc_growth_all_graduates"]])
+  expect_identical(tx$paras[1], "Data Insight \u2013 October 20, 2026")
   txt <- paste(tx$paras, collapse = "\n")
   for (s in c("climbing again", "Graduates drive", "rebound is small", "All of B.C.’s growth", "For B.C.:",
               "The rise is real", "may now be graduating", "despite rising permits", stale))

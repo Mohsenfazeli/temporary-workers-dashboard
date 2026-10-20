@@ -101,8 +101,6 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
   ab_unk <- rule("alberta_unknown_imp", v("ab_ytd_increase") > 0 && v("ab_unk_ytd_increase") > 0 &&
                    v("ab_unk_share_of_increase") >= 0.25, "Unknown IMP is at least a quarter of Alberta's rise")
   bc_lmia <- v("bc_lmia_ytd_change"); bc_lmia_down <- bc_lmia < 0
-  title_rule <- rule("title_storyline", pgwp_drive && bc_small,
-                     "Graduates drive a rebound and B.C.'s share is small (the note's title)")
   geo13 <- fx$geo[fx$geo$geography %in% names(Q2_GEO_CODE), ]
   top <- geo13$geography[which.max(geo13$contrib_ytd)]
   top_k <- Q2_GEO_CODE[[top]]
@@ -376,9 +374,12 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
     sprintf("Numbers update with each IRCC release; context written for the release of %s", fmt_date(Q2_CONTEXT_RELEASE)) else
       sprintf("Numbers: %s; context written for the release of %s",
               if (is.na(release_date)) "the data shown" else paste("release of", fmt_date(release_date)), fmt_date(Q2_CONTEXT_RELEASE))
-  title <- if (title_rule) sprintf("Graduates drive the %d work permit rebound, but B.C.’s share shrinks", Y) else
-    sprintf("Work permits in Canada and B.C., %s", YL(Y))
-  byline <- paste("Mohsen Fazeli \u00b7", if (context_release) Q2_NOTE_WRITTEN else paste("updated", fmt_date(build_date)), "\u00b7", context_line)
+  # Title rule: "Data Insight – <the note's date>" (en dash, no subtitle), the
+  # same date as the byline: the date of Mohsen's text for the release it was
+  # written for, otherwise the build date.
+  note_date <- if (context_release) Q2_NOTE_WRITTEN else fmt_date(build_date)
+  title <- sprintf("Data Insight \u2013 %s", note_date)
+  byline <- paste("Mohsen Fazeli \u00b7", if (context_release) note_date else paste("updated", note_date), "\u00b7", context_line)
   rel_ref <- if (is.na(release_date)) "data shown" else paste("release of", fmt_date(release_date))
   refs_lines <- c(
     sprintf("[1] IRCC, TFWP work permit holders, %s.", rel_ref), sprintf("[2] IRCC, IMP work permit holders, %s.", rel_ref),
