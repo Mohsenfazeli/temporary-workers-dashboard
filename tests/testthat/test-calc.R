@@ -228,7 +228,8 @@ test_that("chart titles name what is shown and follow the filters", {
   s <- list(start = as.Date("2015-01-01"), end = latest, resolution = "Annual",
             geography = "Canada", program_choice = "Both", last_moy = NULL)
   mo <- month.abb[as.integer(format(latest, "%m"))]; yr <- format(latest, "%Y")
-  per <- sprintf("2015 to %s (Jan\u2013%s)", yr, mo)
+  # Full years and the part year named separately (not "2015 to 2026 (Jan-Jul)")
+  per <- sprintf("2015 to %d (full years) and %s (Jan\u2013%s)", as.integer(yr) - 1L, yr, mo)
   expect_equal(chart_title("headline", s), paste0("Work permits issued by program, Canada, ", per))
   expect_equal(chart_title("trend", s), paste0("Work permits issued, both programs and each program, Canada, ", per))
   expect_equal(chart_title("yoy", s), paste0("Change from a year earlier in work permits issued, by program, Canada, ", per))
@@ -252,10 +253,33 @@ test_that("chart titles name what is shown and follow the filters", {
                sprintf("Work permits issued by program, Canada, %s (Jan\u2013%s)", yr, mo))
   # Change-from-a-year-earlier titles start where the comparison can start
   expect_equal(chart_title("yoy", yoy_title_sel(s, min(d$month))),
-               sprintf("Change from a year earlier in work permits issued, by program, Canada, 2016 to %s (Jan\u2013%s)", yr, mo))
+               sprintf("Change from a year earlier in work permits issued, by program, Canada, 2016 to %d (full years) and %s (Jan\u2013%s)", as.integer(yr) - 1L, yr, mo))
   expect_equal(yoy_title_sel(utils::modifyList(s, list(start = as.Date("2018-03-01"))), min(d$month))$start, as.Date("2018-03-01"))
   expect_equal(chart_title("headline", utils::modifyList(s, list(end = as.Date("2024-12-01")))),
                "Work permits issued by program, Canada, 2015 to 2024")
+})
+
+test_that("annual period text says which years are full and which are part years", {
+  j <- function(a, b) period_text(as.Date(a), as.Date(b), "Annual")
+  expect_equal(j("2015-01-01", "2026-07-01"), "2015 to 2025 (full years) and 2026 (Jan\u2013Jul)")
+  expect_equal(j("2015-01-01", "2024-12-01"), "2015 to 2024")
+  expect_equal(j("2025-01-01", "2026-07-01"), "2025 (full year) and 2026 (Jan\u2013Jul)")
+  expect_equal(j("2025-03-01", "2026-07-01"), "2025 (Mar\u2013Dec) and 2026 (Jan\u2013Jul)")
+  expect_equal(j("2019-03-01", "2026-07-01"), "2019 (Mar\u2013Dec), 2020 to 2025 (full years) and 2026 (Jan\u2013Jul)")
+  expect_equal(j("2019-03-01", "2024-12-01"), "2019 (Mar\u2013Dec) and 2020 to 2024 (full years)")
+  expect_equal(j("2026-01-01", "2026-07-01"), "2026 (Jan\u2013Jul)")
+  # Same months each year and monthly view are unchanged
+  expect_equal(period_text(as.Date("2015-01-01"), as.Date("2026-07-01"), "Annual", 7L), "Jan\u2013Jul of each year, 2015 to 2026")
+  expect_equal(period_text(as.Date("2015-01-01"), as.Date("2026-07-01"), "Monthly"), "Jan 2015 to Jul 2026, by month")
+})
+
+test_that("growth comparison has a short name for the Geography table header", {
+  g <- kpi_period_change(filter_selection(d, min(d$month), latest, "Canada", c("TFWP", "IMP")))
+  expect_equal(g$short, sprintf("%s\u2013%s vs 2015", fmt_month_short(latest %m-% months(11)), fmt_month_short(latest)))
+  g2 <- kpi_period_change(filter_selection(d, as.Date("2026-01-01"), latest, "Canada", c("TFWP", "IMP")))
+  expect_equal(g2$short, sprintf("%s vs Jan 2026", fmt_month_short(latest)))
+  g3 <- kpi_period_change(filter_selection(d, as.Date("2015-01-01"), as.Date("2016-12-01"), "Canada", "IMP"))
+  expect_equal(g3$short, "2016 vs 2015")
 })
 
 test_that("chart titles carry no numbers other than dates and no trend wording", {

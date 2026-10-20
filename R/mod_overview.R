@@ -122,6 +122,16 @@ overview_server <- function(id, sel, data, meta) {
           htmltools::tags$a(href = IN_CANADA_NOTE$url, target = "_blank", IN_CANADA_NOTE$source, .noWS = "after"), "."))
     })
 
+    # The fixed points are for Canada, both programs. When a province or
+    # territory, or one program, is chosen, show the points for the
+    # selection instead (and back again for Canada, both programs).
+    shiny::observeEvent(list(sel()$geography, sel()$program_choice), {
+      s <- sel()
+      bslib::nav_select("notes_tab", session = session,
+        selected = if (s$geography == "Canada" && s$program_choice == "Both") "What the data show"
+                   else "For your selection")
+    }, ignoreInit = TRUE)
+
     # ---- Takeaways for the current selection ----
     output$takeaways <- shiny::renderUI({
       s <- sel()

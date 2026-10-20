@@ -21,7 +21,9 @@ composition_ui <- function(id) {
                           selected = "share", inline = TRUE),
       # Shares of the permits whose program IRCC identifies (leaves out
       # "Unknown International Mobility Program"); off by default.
-      shiny::checkboxInput(ns("known_only"), "IMP shares: leave out Unknown IMP", value = FALSE)),
+      shiny::checkboxInput(ns("known_only"),
+        "IMP shares: count only permits with a known category (Unknown IMP is left out, so the known categories add to 100%)",
+        value = FALSE)),
     bslib::layout_columns(
       col_widths = bslib::breakpoints(sm = 12, lg = c(6, 6)),
       chart_card(ns, "share_tfwp", height = "470px"),

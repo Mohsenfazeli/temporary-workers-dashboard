@@ -221,7 +221,9 @@ test_that("external feedback: YoY shows both programs, merged event label, table
   expect_match(tr$yoy_plot, "Both programs", fixed = TRUE)
   expect_match(tr$yoy_title, "^Change from a year earlier in work permits issued, by program, Canada, ")
   expect_no_match(tr$yoy_title, "%")
-  expect_match(tr$trend_plot, "2024: study cap & resident target & TFWP limits & graduate permit rules", fixed = TRUE)
+  # Events in one year share one numbered box (key under the chart), not a long label
+  expect_match(tr$trend_plot, '"text":"2\u20135"', fixed = TRUE)
+  expect_no_match(tr$trend_plot, "study cap &", fixed = TRUE)
   tf <- render_all("trends", make_sel("Canada", "TFWP", "Annual"))
   expect_no_match(tf$yoy_plot, "Both programs", fixed = TRUE)
   geo <- render_all("geography", make_sel("Canada", "Both", "Annual"))
@@ -255,4 +257,61 @@ test_that("plain language: no 'YTD', 'took effect' or other jargon in any tab", 
   expect_no_match(ui, jargon)
   # TFWP, IMP, LMIA and PGWP are each defined in plain words in the glossary
   for (t in c("TFWP", "IMP", "LMIA", "PGWP")) expect_true(t %in% GLOSSARY$term)
+})
+
+test_that("feedback Oct 20: part year not joined, labelled change, numbered events, clearer table", {
+  tr <- render_all("trends", make_sel("Canada", "Both", "Annual"))
+  pl <- jsonlite::fromJSON(tr$trend_plot, simplifyVector = FALSE)$x
+  # The lines (lines+markers) never include the part year; it is a separate open circle
+  lines <- Filter(function(t) identical(t$mode, "lines+markers"), pl$data)
+  expect_length(lines, 3)
+  for (t in lines) expect_false(any(grepl("Jan\u2013", unlist(t$x))))
+  opens <- Filter(function(t) identical(t$mode, "markers"), pl$data)
+  expect_length(opens, 3)
+  for (t in opens) expect_equal(t$marker$symbol, "circle-open")
+  # Label: change from the same months a year earlier (same number as the Overview card)
+  card <- overview_cards(d, latest, "Canada", "Both")$cards[[2]]$value
+  expect_match(tr$trend_plot, sprintf("Jan\u2013Jul 2026: %s<br>vs Jan\u2013Jul 2025", card), fixed = TRUE)
+  # Numbered key under the chart
+  expect_match(tr$trend_source, "1. <a href", fixed = TRUE)
+  expect_match(tr$trend_source, "6. <a href", fixed = TRUE)
+  expect_match(tr$trend_source, "not joined to the full years", fixed = TRUE)
+  # Monthly view: plain lines, no markers, no part-year label
+  mo <- render_all("trends", make_sel("Canada", "Both", "Monthly"))
+  mp <- jsonlite::fromJSON(mo$trend_plot, simplifyVector = FALSE)$x
+  expect_true(all(vapply(mp$data, function(t) identical(t$mode, "lines"), TRUE)))
+  expect_no_match(mo$trend_plot, "vs Jan\u2013Jul 2025", fixed = TRUE)
+  # One program: label on that program's point
+  tf <- render_all("trends", make_sel("Canada", "TFWP", "Annual"))
+  expect_match(tf$trend_plot, "Jan\u2013Jul 2026: ", fixed = TRUE)
+  # Geography table: Growth header names the periods; plain flag with a tooltip
+  geo <- render_all("geography", make_sel("Canada", "Both", "Annual"))
+  expect_match(geo$rank_table, sprintf("Growth, %s\u2013%s vs 2015", fmt_month_short(latest %m-% months(11)), fmt_month_short(latest)), fixed = TRUE)
+  expect_match(geo$rank_table, "Hidden counts", fixed = TRUE)
+  expect_match(geo$rank_table, "hidden-flag", fixed = TRUE)
+  expect_no_match(geo$rank_table, "Small", fixed = TRUE)
+  src <- list()
+  sel <- shiny::reactiveVal(make_sel("Canada", "Both", "Annual"))
+  shiny::testServer(function(input, output, session) geography_server("x", sel, d, meta), {
+    for (o in c("table_source", "contrib_source")) src[[o]] <<- paste(format(output[[paste0("x-", o)]]), collapse = "")
+  })
+  expect_match(src$table_source, "many hidden counts", fixed = TRUE)
+  expect_no_match(src$table_source, "Small n", fixed = TRUE)
+  # Short common source line with a link to About the data
+  expect_match(src$contrib_source, "about-link", fixed = TRUE)
+  expect_match(src$contrib_source, "Permits, not people", fixed = TRUE)
+  # Composition: the Unknown IMP option says what happens to the 100%
+  ui <- as.character(htmltools::renderTags(composition_ui("c"))$html)
+  expect_match(ui, "count only permits with a known category", fixed = TRUE)
+  expect_no_match(ui, "leave out Unknown IMP", fixed = TRUE)
+})
+
+test_that("feedback Oct 20: sidebar definitions fold away, filters start closed on a phone, notes tab follows the selection", {
+  app_src <- paste(readLines(file.path(PROJECT, "app.R"), warn = FALSE), collapse = "\n")
+  expect_match(app_src, 'mobile = "closed"', fixed = TRUE)
+  expect_match(app_src, "tags$details(class = \"sidebar-help\"", fixed = TRUE)
+  expect_match(app_src, "not individual workers", fixed = TRUE)
+  expect_match(app_src, "a.about-link", fixed = TRUE)
+  ov_src <- paste(readLines(file.path(PROJECT, "R", "mod_overview.R"), warn = FALSE), collapse = "\n")
+  expect_match(ov_src, 'bslib::nav_select("notes_tab"', fixed = TRUE)
 })

@@ -59,15 +59,29 @@ trends_server <- function(id, sel, data, meta) {
       # and formulas (~), because plotly evaluates arguments lazily and a
       # plain loop variable would end up pointing at the last program.
       ser$x <- if (s$resolution == "Monthly") ser$period else ser$label
+      # Annual view: a part year (e.g. 2026, January to July) is an open
+      # circle NOT joined to the full years, so the line does not look like
+      # a drop; it is labelled with its change from the same months a year
+      # earlier instead.
       for (pr in intersect(c("Total", "TFWP", "IMP"), unique(ser$program))) {
         d <- ser[ser$program == pr, ]
-        p <- p |> plotly::add_trace(
-          data = d, x = ~x, y = ~value, type = "scatter",
+        nm <- if (pr == "Total") "Both programs" else pr
+        dl <- if (s$resolution == "Monthly") d else d[!d$partial, ]
+        if (nrow(dl) > 0) p <- p |> plotly::add_trace(
+          data = dl, x = ~x, y = ~value, type = "scatter",
           mode = if (s$resolution == "Monthly") "lines" else "lines+markers",
-          name = if (pr == "Total") "Both programs" else pr,
+          name = nm, legendgroup = nm,
           line = list(color = PROGRAM_COLOURS[[pr]], width = if (pr == "Total") 3 else 2),
-          marker = list(color = PROGRAM_COLOURS[[pr]], size = 8,
-                        symbol = ifelse(d$partial, "circle-open", "circle")),
+          # markers only in the annual view (plotly would add them to a
+          # monthly line too if a marker style were given)
+          marker = if (s$resolution == "Monthly") NULL else list(color = PROGRAM_COLOURS[[pr]], size = 8),
+          text = ~hover, hoverinfo = "text")
+        dp <- if (s$resolution == "Monthly") d[0, ] else d[d$partial, ]
+        if (nrow(dp) > 0) p <- p |> plotly::add_trace(
+          data = dp, x = ~x, y = ~value, type = "scatter", mode = "markers",
+          name = nm, legendgroup = nm, showlegend = nrow(dl) == 0,
+          marker = list(color = PROGRAM_COLOURS[[pr]], size = 9, symbol = "circle-open",
+                        line = list(width = 2)),
           text = ~hover, hoverinfo = "text")
       }
       p <- style_plot(p,
@@ -86,34 +100,59 @@ trends_server <- function(id, sel, data, meta) {
       # short notes would overlap, so only the dotted lines are drawn there;
       # the full notes are always in the source line under the chart.
       narrow <- is_narrow()
+      ann <- list()
       if (nrow(ev) > 0) {
         # Monthly: place the note at the date. Annual (category axis): use the
         # category POSITION (0 = first year shown), because plotly would read
         # a label like "2020" as position 2020 and squash the chart.
         yrs_shown <- sort(unique(as.integer(format(ser$period, "%Y"))))
+        # Each line carries only its number (key under the chart), so the
+        # notes never overlap.
+        ev$short <- as.character(event_number(ev$date))
         if (s$resolution == "Annual") {
-          # One line per year: events in the same year share a line and a label
+          # One line per year: events in the same year share a line, e.g. "2\u20135"
           ev$year <- as.integer(format(ev$date, "%Y"))
           ev <- do.call(rbind, lapply(split(ev, ev$year), function(e) data.frame(
             date = e$date[1], year = e$year[1],
-            short = if (nrow(e) > 1) paste0(e$year[1], ": ", paste(e$tiny, collapse = " & "))
-                    else e$short[1])))
+            short = event_number_label(event_number(e$date)))))
         }
         xs <- if (s$resolution == "Monthly") ev$date else match(ev$year, yrs_shown) - 1
         p <- p |> plotly::layout(
           shapes = lapply(seq_len(nrow(ev)), function(i) list(
             type = "line", x0 = xs[i], x1 = xs[i], yref = "paper", y0 = 0, y1 = 1,
-            line = list(color = "#777777", dash = "dot", width = 1))),
-          annotations = if (narrow) list() else lapply(seq_len(nrow(ev)), function(i) list(
-            # One height per note (stepping down from the top, inside the
-            # headroom), because several 2024-2025 events are close together
-            x = xs[i], y = 1 - (if (s$resolution == "Monthly") 0.055 else 0.065) * (i - 1),
+            line = list(color = "#777777", dash = "dot", width = 1))))
+        if (!narrow) ann <- lapply(seq_len(nrow(ev)), function(i) list(
+            # Monthly: events close together (2024) step down so the
+            # boxes do not touch; annual: one row at the top
+            x = xs[i], y = if (s$resolution == "Monthly") 1 - 0.07 * (i - 1) else 1,
             yref = "paper",
             text = ev$short[i], showarrow = FALSE,
             xanchor = "right", yanchor = "top", xshift = -3,
-            font = list(size = 11, color = "#444444"),
-            bgcolor = "rgba(255,255,255,0.85)")))
+            font = list(size = 11, color = "#333333"),
+            bordercolor = "#777777", borderwidth = 1, borderpad = 2,
+            bgcolor = "rgba(255,255,255,0.9)"))
       }
+      # Label the latest part year with its change from the same months a
+      # year earlier (both programs, or the one program selected). Not on a
+      # narrow screen, where it would sit on the lines (the hover and the
+      # chart below still give the change).
+      if (s$resolution == "Annual" && !narrow) {
+        top <- if (length(s$programs) == 2) "Total" else s$programs
+        lp <- ser[ser$program == top & ser$partial & ser$period == max(ser$period), ]
+        yy <- yoy(); yy <- yy[yy$program == top & yy$period == max(ser$period) & !is.na(yy$yoy), ]
+        if (nrow(lp) == 1 && nrow(yy) == 1) {
+          mtx <- sub("^\\d{4} \\((.*)\\)$", "\\1", lp$label)            # "Jan\u2013Jul"
+          yr <- as.integer(format(lp$period, "%Y"))
+          ann <- c(ann, list(list(
+            x = length(unique(ser$x)) - 1, y = lp$value, xref = "x", yref = "y",
+            text = sprintf("%s %d: %s<br>vs %s %d", mtx, yr, fmt_pct(yy$yoy), mtx, yr - 1),
+            showarrow = TRUE, arrowhead = 0, arrowcolor = "#777777", ax = -15, ay = -58,
+            xanchor = "center", align = "center",
+            font = list(size = 11, color = "#222222"),
+            bgcolor = "rgba(255,255,255,0.9)")))
+        }
+      }
+      if (length(ann) > 0) p <- p |> plotly::layout(annotations = ann)
       if (s$resolution == "Monthly") p <- p |> plotly::layout(xaxis = list(tickformat = "%Y", dtick = "M12"))
       p
     })
@@ -123,7 +162,7 @@ trends_server <- function(id, sel, data, meta) {
       source_line(meta,
         extra = htmltools::tagList(
           if (!is.null(s$last_moy)) sprintf("Every year shows January to %s only. ", month.name[s$last_moy])
-          else if (s$resolution == "Annual") "Open circles cover only part of a year. ",
+          else if (s$resolution == "Annual") "Open circles cover only part of a year and are not joined to the full years. ",
           event_notes_html(ev)))
     })
     # ---- Year-over-year change ----

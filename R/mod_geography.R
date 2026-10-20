@@ -21,7 +21,9 @@ geography_ui <- function(id) {
         full_screen = TRUE,
         bslib::card_header(htmltools::tags$h2(class = "chart-title",
           shiny::textOutput(ns("rank_table_title"), inline = TRUE))),
-        bslib::card_body(DT::DTOutput(ns("rank_table"))),
+        # Not a fill area: the card grows to show all 13 rows without an
+        # inner scroll bar (its taller header names the growth periods)
+        bslib::card_body(DT::DTOutput(ns("rank_table")), fillable = FALSE, fill = FALSE),
         bslib::card_footer(shiny::uiOutput(ns("table_source")))
       )
     ),
@@ -42,13 +44,17 @@ geography_server <- function(id, sel, data, meta) {
     output$rank_table_title <- shiny::renderText({
       chart_title("table", sel())
     })
+    # The growth comparison for the selected period, e.g. "Aug 2025\u2013Jul 2026
+    # vs 2015", named in the table header and the hover text.
+    growth <- shiny::reactive({ s <- sel()
+      kpi_period_change(filter_selection(data, s$start, s$end, "Canada", s$programs)) })
     output$rank_plot <- plotly::renderPlotly({
       r <- rank(); s <- sel()
       r <- r[order(r$value), ]
       r$geography <- factor(r$geography, levels = r$geography)
       highlight <- r$geography == s$geography
-      r$hover <- sprintf("%s<br>Permits: %s<br>Share of Canada: %s<br>Growth: %s",
-                         r$geography, fmt_n(r$value), fmt_share(r$share), fmt_pct(r$growth))
+      r$hover <- sprintf("%s<br>Permits: %s<br>Share of Canada: %s<br>Growth (%s): %s",
+                         r$geography, fmt_n(r$value), fmt_share(r$share), growth()$short, fmt_pct(r$growth))
       # source = a name for this chart's click events (see the observer below);
       # customdata carries the province name of each bar.
       p <- plotly::plot_ly(r, y = ~geography, x = ~value, type = "bar", orientation = "h",
@@ -85,34 +91,38 @@ geography_server <- function(id, sel, data, meta) {
       shiny::updateSelectInput(session$rootScope(), "geography", selected = place)
     }, ignoreInit = TRUE)
     output$rank_source <- shiny::renderUI(source_line(meta,
-      extra = "Each bar is the total for the whole selected period, with its share of Canada in brackets. Canada's total also includes permits with no province or territory given, which have no bar."))
+      extra = "Each bar is the total for the whole selected period (for the latest year only, choose \u201cLast 12 months\u201d on the left), with its share of Canada in brackets. Canada's total also includes permits with no province or territory given, which have no bar."))
 
     output$rank_table <- DT::renderDT({
       r <- rank(); s <- sel()
       # Short headers so all six columns fit in the card at 1366 px; the
-      # source line under the table explains Share, Growth and Note.
+      # Growth header names the two periods compared, and the source line
+      # under the table explains Share, Growth and Note.
+      g_col <- if (nzchar(growth()$short)) paste0("Growth, ", growth()$short) else "Growth"
       tbl <- data.frame(`#` = r$rank, `Province / territory` = r$geography,
                         # Share as text so tiny shares read "<0.1%" rather than "0.0%"
                         Permits = r$value, Share = fmt_share(r$share, 1),
                         Growth = r$growth,
-                        # Marker where suppressed small values could hide over 10% more
+                        # Marker where IRCC's hidden small counts could add over 10%
+                        # (hover for the meaning)
                         `Note*` = ifelse(undercount_flag(r$value, r$masked_cells),
-                                         "Small\u00a0n", ""), check.names = FALSE)   # non-breaking space: one line
+                                         HIDDEN_COUNTS_FLAG, ""), check.names = FALSE)
+      names(tbl)[5] <- g_col
       DT::datatable(tbl, rownames = FALSE, selection = "none",
+                    escape = setdiff(names(tbl), "Note*"),   # the flag is HTML (tooltip)
                     class = "compact stripe rank-table",
                     # scrollX keeps every column reachable on a phone
                     options = list(dom = "t", pageLength = 13, ordering = TRUE,
                                    scrollX = TRUE, autoWidth = FALSE)) |>
         DT::formatRound("Permits", digits = 0, mark = ",") |>
-        DT::formatPercentage("Growth", digits = 1) |>
+        DT::formatPercentage(g_col, digits = 1) |>
         DT::formatStyle("Province / territory", target = "row",
                         backgroundColor = DT::styleEqual(s$geography, "#FFF4D6"))
     }, server = FALSE)   # client-side: 13 rows, data sent with the table
     output$table_source <- shiny::renderUI(source_line(meta,
       # The only explanation of Growth (no duplicate table caption)
-      extra = paste0("Share = share of all permits in Canada. Growth = ", (\(s) kpi_period_change(filter_selection(
-        data, s$start, s$end, "Canada", s$programs))$text)(sel()), ". ",
-        "*\"Small n\" = few permits: IRCC's hidden small counts (0\u20135 each, shown as 0) could add more than 10% to the total, so read its share and growth with care.")))
+      extra = paste0("Share = share of all permits in Canada. Growth = ", growth()$text, ". ",
+        "*\u26a0 = many hidden counts: IRCC hides counts of 0\u20135 (shown as 0), and for this place they could add more than 10% to its total, so read its share and growth with care.")))
 
     # ---- Compare the selected province/territory with Canada ----
     cmp <- shiny::reactive({
@@ -225,7 +235,7 @@ geography_server <- function(id, sel, data, meta) {
     output$contrib_source <- shiny::renderUI(source_line(meta, extra = paste0(
       "Share of Canada's change = the province or territory's change in permits \u00f7 Canada's change, ",
       attr(contrib(), "label"), " (the same months as the Overview cards). ",
-      "A negative share means the province or territory moved the opposite way to Canada (for example, fell while Canada rose). ",
+      "A negative share means it moved the opposite way to Canada. ",
       "Permits with no province or territory given are not listed, so the shares do not add to exactly 100%.")))
 
     output$compare_source <- shiny::renderUI({

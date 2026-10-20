@@ -70,7 +70,9 @@ status_bar <- htmltools::div(
   if (identical(META$source, "release")) {
     # Default: the frozen release, labelled plainly with IRCC's release date
     htmltools::tags$span(htmltools::tags$strong("Data: "),
-      META$release_phrase)   # e.g. "IRCC open data release of September 15, 2026 (data to July 2026)"
+      META$release_phrase,   # e.g. "IRCC open data release of September 15, 2026 (data to July 2026)"
+      # What the dashboard counts, said once at the top
+      " \u00b7 Counts work permits issued, including renewals, not individual workers.")
   } else {
     htmltools::tags$span(htmltools::tags$strong("Data last retrieved: "),
                          fmt_datetime(META$retrieved_at))
@@ -97,8 +99,9 @@ YTD_MONTHS <- if (LATEST_M == 1) "Jan" else paste0("Jan\u2013", month.abb[LATEST
 
 sidebar_controls <- bslib::sidebar(
   width = 290, id = "sidebar", title = "Filters (apply to every tab)",
-  # Open on desktop; on a phone the filters sit above the charts.
-  open = list(desktop = "open", mobile = "always-above"),
+  # Open on desktop; on a phone the filters start closed behind the
+  # "Filters" button, so the key numbers and charts come first.
+  open = list(desktop = "open", mobile = "closed"),
   shinyWidgets::sliderTextInput(
     "range", "Period (month the permit was issued)",
     choices = MONTH_LABELS, selected = c(MONTH_LABELS[1], tail(MONTH_LABELS, 1)),
@@ -123,7 +126,10 @@ sidebar_controls <- bslib::sidebar(
                                   "IMP only" = "IMP"), selected = "Both"),
   shiny::actionButton("reset", "Reset filters", icon = shiny::icon("rotate-left"),
                       class = "btn-outline-primary"),
-  htmltools::tags$div(class = "sidebar-help",
+  # Definitions folded away (one click to open); the full glossary is in
+  # About the data.
+  htmltools::tags$details(class = "sidebar-help",
+    htmltools::tags$summary("What TFWP, IMP and the counts mean"),
     htmltools::tags$p(htmltools::tags$strong("TFWP (Temporary Foreign Worker Program)", .noWS = "after"),
       ": an employer hires a foreign worker for a job, usually after a government check, the Labour Market Impact Assessment (LMIA), shows no Canadian worker is available."),
     htmltools::tags$p(htmltools::tags$strong("IMP (International Mobility Program)", .noWS = "after"),
@@ -145,7 +151,12 @@ ui <- bslib::page_navbar(
   fillable = FALSE,          # let pages scroll; cards keep their full height
   sidebar = sidebar_controls,
   header = htmltools::tagList(
-    htmltools::tags$head(htmltools::tags$link(rel = "stylesheet", href = "styles.css")),
+    htmltools::tags$head(htmltools::tags$link(rel = "stylesheet", href = "styles.css"),
+      # "More in About the data" links under the charts open that tab
+      htmltools::tags$script(htmltools::HTML(
+        "$(document).on('click', 'a.about-link', function(e) { e.preventDefault();",
+        "  var t = document.querySelector('.navbar a[data-value=\"About the data\"]');",
+        "  if (t) { t.click(); window.scrollTo(0, 0); } });"))),
     status_bar),
   bslib::nav_panel("Overview", overview_ui("overview")),
   bslib::nav_panel("Trends", trends_ui("trends")),

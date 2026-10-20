@@ -56,3 +56,20 @@ table.rank-table th, table.rank-table td { padding: 4px 6px !important; }
 .highlights-date { font-size: 0.85rem; margin-bottom: 0.3rem; color: #003366; }
 /* Plain-language pass: one line above the Overview cards saying what they cover */
 .kpi-intro { font-size: 0.85rem; color: #333; margin: 0 0 0.4rem 0; }
+
+/* Reviewer feedback (Oct 20, 2026) */
+/* Overview: "What the data show" / "For your selection" look like tabs (buttons) */
+#overview-notes_tab .nav-link { border: 1px solid #B8C4D3; border-radius: 0.25rem 0.25rem 0 0;
+  background: #EEF2F7; color: #1A5A96; padding: 0.3rem 0.6rem; font-size: 0.85rem; margin: 0 2px 2px 0; }
+#overview-notes_tab .nav-link.active { background: #003366; color: #fff; border-color: #003366; }
+#overview-notes_tab .nav-link:hover:not(.active) { background: #DCE5F0; }
+/* Sidebar definitions: folded behind a clickable line */
+details.sidebar-help > summary { cursor: pointer; color: #1A5A96; font-weight: 600; margin-bottom: 0.4rem; }
+/* Geography table: hidden-counts flag */
+.hidden-flag { cursor: help; font-size: 1.1rem; line-height: 1; color: #7A5A00; }
+/* Phone: the filters start closed; label the button that opens them */
+@media (max-width: 575.98px) {
+  .bslib-sidebar-layout > .collapse-toggle { width: auto !important; padding: 4px 10px !important;
+    border: 1px solid #003366 !important; border-radius: 0.25rem; background: #fff !important; color: #003366 !important; }
+  .bslib-sidebar-layout > .collapse-toggle::after { content: "Filters"; font-weight: 600; margin-left: 4px; }
+}

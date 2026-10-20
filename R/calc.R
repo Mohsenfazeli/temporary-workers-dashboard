@@ -362,8 +362,13 @@ kpi_period_change <- function(df) {
   n <- nrow(m)
   if (n >= 24) {
     first <- sum(m$value[1:12]); last <- sum(m$value[(n - 11):n])
+    # Short name of each 12-month block for a column header: "2015" when it
+    # is a calendar year, otherwise "Aug 2025\u2013Jul 2026"
+    blk <- function(a, b) if (format(a, "%m") == "01" && format(a, "%Y") == format(b, "%Y")) format(a, "%Y")
+                          else paste0(fmt_month_short(a), "\u2013", fmt_month_short(b))
     list(change = pct_change(last, first), method = "12m",
          label = "Last 12 months vs first 12 months",
+         short = sprintf("%s vs %s", blk(m$month[n - 11], m$month[n]), blk(m$month[1], m$month[12])),
          first_value = first, last_value = last,
          text = sprintf("the last 12 months (%s\u2013%s) compared with the first 12 months (%s\u2013%s) of the selected period",
                         fmt_month_short(m$month[n - 11]), fmt_month_short(m$month[n]),
@@ -371,11 +376,12 @@ kpi_period_change <- function(df) {
   } else if (n >= 2) {
     list(change = pct_change(m$value[n], m$value[1]), method = "month",
          label = sprintf("%s vs %s", fmt_month_short(m$month[n]), fmt_month_short(m$month[1])),
+         short = sprintf("%s vs %s", fmt_month_short(m$month[n]), fmt_month_short(m$month[1])),
          first_value = m$value[1], last_value = m$value[n],
          text = sprintf("%s compared with %s (single months, so seasonal ups and downs show)",
                         fmt_month_short(m$month[n]), fmt_month_short(m$month[1])))
   } else {
-    list(change = NA_real_, method = "none", label = "Change over the period",
+    list(change = NA_real_, method = "none", label = "Change over the period", short = "",
          first_value = NA, last_value = NA,
          text = "select at least two months to see a change")
   }
@@ -662,7 +668,7 @@ range_text <- function(start, end) {
 }
 
 #' Period as shown on a chart, following the Annual/Monthly view:
-#'   Annual             "2015 to 2026 (Jan\u2013Jul)"   (part years carry their months)
+#'   Annual             "2015 to 2025 (full years) and 2026 (Jan\u2013Jul)"
 #'   Annual, same months "Jan\u2013Jul of each year, 2015 to 2026"
 #'   Monthly            "Jan 2015 to Jul 2026, by month"
 period_text <- function(start, end, resolution = "Annual", last_moy = NULL) {
@@ -675,7 +681,19 @@ period_text <- function(start, end, resolution = "Annual", last_moy = NULL) {
     return(if (sy == ey) paste(mtx, sy) else sprintf("%s of each year, %d to %d", mtx, sy, ey))
   }
   if (sy == ey) return(year_label(sy, sm, em, end))
-  paste(year_label(sy, sm, 12, end), "to", year_label(ey, 1, em, end))
+  # Say which years are full and which are part years, so "2015 to 2026
+  # (Jan-Jul)" is not read as Jan-Jul of every year:
+  #   "2015 to 2025 (full years) and 2026 (Jan-Jul)"
+  first_full <- sm == 1; last_full <- em == 12
+  if (first_full && last_full) return(paste(sy, "to", ey))
+  fy <- if (first_full) sy else sy + 1L        # first full year
+  ly <- if (last_full) ey else ey - 1L         # last full year
+  parts <- c(if (!first_full) year_label(sy, sm, 12, end),
+             if (fy == ly) paste0(fy, " (full year)")
+             else if (fy < ly) sprintf("%d to %d (full years)", fy, ly),
+             if (!last_full) year_label(ey, 1, em, end))
+  if (length(parts) == 2) paste(parts[1], "and", parts[2])
+  else paste0(parts[1], ", ", parts[2], " and ", parts[3])
 }
 
 #' Change-from-a-year-earlier charts start one year after the data do (the
@@ -771,7 +789,7 @@ unknown_imp_note_text <- function(data, geography, latest_month) {
   range_tx <- if (length(span) > 1) sprintf("%s\u2013%s they were %s to %s of IMP permits each year",
                                             yrs[first_u], yrs[length(yrs)], fmt_share(min(share)), fmt_share(max(share)))
               else sprintf("%s they were %s of IMP permits", yrs[first_u], fmt_share(share[1]))
-  sprintf("%s. %s%s (a peak of %s in %s).%s To see the mix without them, tick \"IMP shares: leave out Unknown IMP\". ",
+  sprintf("%s. %s%s (a peak of %s in %s).%s To see the mix without them, tick \"IMP shares: count only permits with a known category\" above the charts. ",
           lead, none_before, range_tx, fmt_n(max(u_by)), peak, mask_note)
 }
 

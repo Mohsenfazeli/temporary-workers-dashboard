@@ -124,10 +124,18 @@ source_line <- function(meta, extra = NULL) {
     htmltools::HTML(paste0(
       "Source: IRCC open data (", a(meta$urls[["TFWP"]], "TFWP"), ", ", a(meta$urls[["IMP"]], "IMP"),
       "), ", htmltools::htmlEscape(data_date_text(meta)), ". ",
-      "Counts are permits issued, not people; IRCC hides counts of 0\u20135, shown here as 0. ")),
+      # One short caveat; the details are one click away in About the data
+      "Permits, not people; IRCC hides counts of 0\u20135 (shown as 0). ",
+      '<a href="#" class="about-link">More in About the data</a>. ')),
     extra
   )
 }
+
+# Geography table flag: many of the place's counts are hidden by IRCC (0-5
+# each, shown as 0), enough to add over 10% to its total. Hover for the meaning.
+HIDDEN_COUNTS_FLAG <- paste0(
+  '<span class="hidden-flag" title="Hidden counts: many counts here are hidden by IRCC (0 to 5 permits each, shown as 0). ',
+  'Together they could add more than 10% to this total." aria-label="Many hidden counts">\u26a0</span>')
 
 # ---- 5. Card with a point-stating title, a chart and a source line -------------
 chart_card <- function(ns, id, height = "380px", footer = NULL, full_screen = TRUE) {
@@ -191,15 +199,28 @@ IN_CANADA_NOTE <- list(
   url = "https://www.canada.ca/en/immigration-refugees-citizenship/corporate/immigration-system/levels/supplementary-immigration-levels-2026-2028.html"
 )
 
+# Fixed number of each event (1 to 6, in date order), used on the chart and
+# in the key under it, so the numbers stay the same whatever period is shown.
+event_number <- function(dates) match(as.Date(dates), KEY_EVENTS$date)
+
+# Label for a group of events drawn on one line: "1", "2\u20135" or "2, 4".
+event_number_label <- function(nums) {
+  nums <- sort(nums)
+  if (length(nums) == 1) return(as.character(nums))
+  if (all(diff(nums) == 1)) return(paste0(nums[1], "\u2013", nums[length(nums)]))
+  paste(nums, collapse = ", ")
+}
+
 # The event notes as HTML for a source line: each note linked to its source.
 event_notes_html <- function(ev) {
   if (nrow(ev) == 0) return(NULL)
   # One short line: each short event name links to its official source; the
   # full wording and source titles are listed in About the data.
   esc <- htmltools::htmlEscape
-  items <- sprintf('<a href="%s" target="_blank" title="%s">%s</a>',
+  # Numbered to match the small numbered boxes on the chart (event_number())
+  items <- sprintf('%d. <a href="%s" target="_blank" title="%s">%s</a>', event_number(ev$date),
                    esc(ev$url, attribute = TRUE), esc(paste0(ev$label, ". Source: ", ev$source), attribute = TRUE),
                    esc(ev$short))
-  htmltools::HTML(paste0("Dotted lines mark policy changes, for context only; they do not imply cause (",
-                         paste(items, collapse = "; "), ")."))
+  htmltools::HTML(paste0("Numbered dotted lines mark policy changes, for context only; they do not imply cause: ",
+                         paste(items, collapse = "; "), "."))
 }
