@@ -10,3 +10,6 @@ rsconnect/
 # Raw IRCC downloads (fetched by tools/get_testdata.R)
 testdata/
 raw_profile/
+# Downloads PDFs (built by tools/build_exports.R before each deploy)
+www/exports/
+__pycache__/

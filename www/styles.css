@@ -85,3 +85,12 @@ details.sidebar-help > summary { cursor: pointer; color: #1A5A96; font-weight: 6
 .help-a p:last-child, .help-a ul:last-child { margin-bottom: 0; }
 .help-note { margin-top: 0.3rem; }
 .help-wait { font-size: 0.88rem; color: #555; font-style: italic; }
+
+/* Downloads tab */
+.downloads-tab { max-width: 860px; }
+.downloads-intro { margin-bottom: 0.8rem; }
+.downloads-item { border-top: 1px solid #e3e7ee; padding: 0.7rem 0 0.8rem; }
+.downloads-title { font-size: 1.05rem; font-weight: 600; color: #003366; margin: 0 0 0.25rem; }
+.downloads-item p { margin: 0 0 0.3rem; }
+.downloads-meta { color: #555; font-size: 0.9rem; }
+.downloads-note { font-size: 0.92rem; color: #333; }

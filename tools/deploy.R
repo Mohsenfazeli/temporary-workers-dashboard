@@ -33,6 +33,16 @@ if (nzchar(token) && nzchar(secret) && nzchar(account)) {
        "or register the account on this computer first.")
 }
 
+# ---- 1b. The Downloads tab's PDFs, built from the data before every upload ----
+# tools/build_exports.R makes the three PDFs and www/exports/manifest.json (no
+# AI; needs Chrome, python-docx and LibreOffice on this computer, which the free
+# shinyapps.io servers do not offer). If it fails, nothing is deployed.
+rscript <- file.path(R.home("bin"), "Rscript")
+build_status <- system2(rscript, "tools/build_exports.R")
+if (!identical(as.integer(build_status), 0L) || !file.exists("www/exports/manifest.json")) {
+  stop("Building the Downloads PDFs failed (tools/build_exports.R), so nothing was deployed.")
+}
+
 # ---- 2. Optional: the Help assistant's Gemini API key --------------------------
 # If GEMINI_API_KEY is set here, it is written to a temporary .Renviron that is
 # uploaded with the app (R reads it when the app starts on shinyapps.io) and
@@ -44,7 +54,6 @@ if (file.exists(renv_file)) stop(".Renviron already exists here; move it away fi
 key <- Sys.getenv("GEMINI_API_KEY")
 extra_files <- character()
 if (nzchar(key)) {
-  on.exit(unlink(renv_file), add = TRUE)
   opts <- c("TW_GEMINI_MODEL", "TW_GEMINI_FALLBACK", "TW_GEMINI_TIMEOUT", "TW_GEMINI_THINKING",
             "TW_ASSISTANT_SESSION_MAX", "TW_ASSISTANT_DAILY_MAX")
   set <- opts[nzchar(Sys.getenv(opts))]
@@ -63,13 +72,17 @@ if (nzchar(key)) {
 app_files <- c("app.R",
                list.files("R", pattern = "\\.R$", full.names = TRUE),
                "www/styles.css",
+               list.files("www/exports", full.names = TRUE),   # Downloads tab (built above)
                "data/cache.rds",
                "data/baseline.rds",
                extra_files)
-rsconnect::deployApp(appDir = ".", appFiles = app_files,
-                     appName = "temporary-workers-dashboard",
-                     appTitle = "Temporary Workers in Canada",
-                     account = account, server = "shinyapps.io",
-                     forceUpdate = TRUE, launch.browser = FALSE)
-unlink(renv_file)
+# tryCatch(finally = ...) deletes the temporary .Renviron even if the upload
+# fails or times out (on.exit() does not run at the top level of a script).
+tryCatch(
+  rsconnect::deployApp(appDir = ".", appFiles = app_files,
+                       appName = "temporary-workers-dashboard",
+                       appTitle = "Temporary Workers in Canada",
+                       account = account, server = "shinyapps.io",
+                       forceUpdate = TRUE, launch.browser = FALSE),
+  finally = unlink(renv_file))
 cat("Deployed: https://", account, ".shinyapps.io/temporary-workers-dashboard/\n", sep = "")

@@ -1,0 +1,39 @@
+@page { size: Letter; margin: 1.6cm 1.8cm; }
+body { font-family: "Noto Sans", "Segoe UI", Arial, sans-serif; font-size: 10.3pt; line-height: 1.38; color: #1a1a1a; max-width: none; margin: 0; }
+h1.title { font-size: 18pt; color: #003366; margin: 0 0 2px 0; border-bottom: 3px solid #FCBA19; padding-bottom: 4px; }
+h3.subtitle { font-size: 11pt; font-weight: normal; margin: 4px 0 0 0; color: #333; }
+h4.author, h4.date { display: inline; font-size: 9.5pt; font-weight: normal; color: #555; margin: 0 12px 0 0; }
+h1 { font-size: 12.5pt; color: #003366; margin: 12px 0 3px 0; }
+p { margin: 3px 0 5px 0; }
+ul, ol { margin: 2px 0 6px 0; padding-left: 20px; }
+li { margin: 1px 0; }
+li > ul { margin: 1px 0; }
+a { color: #1A5A96; word-break: break-all; }
+code { font-family: Consolas, "DejaVu Sans Mono", monospace; font-size: 9.3pt; background: #f2f4f7; padding: 0 3px; }
+strong { color: #111; }
+.link-box { border: 1.5px solid #003366; background: #F4F7FB; padding: 6px 10px; margin: 4px 0 6px 0; font-size: 11pt; }
+table { border-collapse: collapse; width: 100%; margin: 4px 0 8px 0; font-size: 9pt; }
+th, td { border: 1px solid #ccc; padding: 3px 6px; vertical-align: top; text-align: left; }
+th { background: #003366; color: #fff; }
+tr:nth-child(even) td { background: #f6f8fb; }
+h2 { font-size: 11pt; color: #003366; margin: 10px 0 3px 0; }
+h3 { font-size: 10.5pt; color: #003366; margin: 8px 0 2px 0; }
+pre { background: #f2f4f7; padding: 4px 8px; font-size: 8.8pt; white-space: pre-wrap; }
+
+/* Two small screenshots side by side */
+.shots { display: flex; gap: 2%; margin: 0.4em 0 0.2em; break-inside: avoid; }
+.shots figure { width: 49%; margin: 0; }
+.shots img { width: 100%; border: 1px solid #ccc; }
+.shots figcaption { font-size: 8pt; color: #444; margin-top: 2px; }
+
+/* Key facts box and one large annotated screenshot (1A) */
+.facts { border-left: 4px solid #FCBA19; background: #FFF9E8; padding: 4px 10px; margin: 6px 0; }
+.facts p { margin: 2px 0; }
+.facts ul { margin: 2px 0 2px 0; }
+.shot-big { margin: 6px 0 2px 0; break-inside: avoid; }
+.shot-big img { width: 100%; border: 1px solid #ccc; }
+.shot-big figcaption { font-size: 8.5pt; color: #333; margin-top: 2px; }
+a.plain { word-break: normal; }
+/* Tables: keep each row whole on one page; links wrap only where needed */
+tr, td, th { break-inside: avoid; }
+a { word-break: normal; overflow-wrap: anywhere; }

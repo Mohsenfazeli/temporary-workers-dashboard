@@ -96,6 +96,7 @@ dashboard_guide_text <- function(meta) {
     "- Composition: the mix of TFWP streams and IMP categories over time (as shares or numbers of permits), totals by category for the period, the IRCC program names inside each category, and what each category means. Option 'IMP shares: count only permits with a known category' leaves Unknown IMP out, so the known categories add to 100%.",
     "- Data: table of the current selection (by year or month, program and category) with a 'Download CSV' button.",
     "- About the data: what is counted, coverage, privacy masking, how to read the charts, how to use, assumptions, sources, glossary, category mapping.",
+    "- Downloads: three PDF files built from the same IRCC data: a short note on work permits for B.C. (numbers and figures update with each release; its context was written for the IRCC release of September 15, 2026), a guide to using the dashboard, and a description of the code package.",
     "- Help: this assistant.",
     "Every chart has a source line; hover over a chart for exact values; the expand icon shows a chart full screen; the camera icon saves a picture of the chart."
   ), collapse = "\n")

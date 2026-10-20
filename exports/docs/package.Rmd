@@ -1,0 +1,71 @@
+---
+title: "About the package and files"
+subtitle: "`r params$v$app_title`"
+author: "Mohsen Fazeli"
+date: "`r params$v$built_for`"
+params:
+  v: NULL
+output:
+  html_document:
+    theme: null
+    highlight: null
+    mathjax: null
+    self_contained: true
+---
+
+```{r setup, include = FALSE}
+v <- params$v
+```
+
+<style>@page { margin: 1.4cm 1.8cm; }</style>
+
+<div class="link-box">**Start here:** open R or RStudio in the package folder `temporary-workers-dashboard` and run `shiny::runApp()`. Steps below.</div>
+
+The package holds the dashboard's code, the processed data and the package list. All numbers come only from the two IRCC CSV files, from the IRCC dataset [Temporary Residents: TFWP and IMP Work Permit Holders – Monthly IRCC Updates](https://open.canada.ca/data/en/dataset/360024f2-17e9-4558-bfc1-3616485d65b9) (Open Government Licence – Canada); other official sources are used only for the policy-event notes and the note on permits and arrivals. The raw IRCC files are not included.
+
+# Run it on your own computer
+
+Internet is needed only once, to install R packages.
+
+1. Install R from <a href="https://cloud.r-project.org">cloud.r-project.org</a> (R `r v$r_min` or newer recommended; built and tested with R `r v$r_version`). RStudio is optional.
+2. Set R's working folder to `temporary-workers-dashboard` (RStudio: *Session > Set Working Directory > Choose Directory…*, or `setwd("C:/path/to/temporary-workers-dashboard")`); `getwd()` should show it.
+3. **Quick run (recommended)**, in the R console: `install.packages("shiny")`, then `shiny::runApp()`. The first run installs about `r v$n_packages` R packages and can take several minutes; then the dashboard opens in your browser.
+4. **Exact versions (optional)**: `install.packages("renv")`, `renv::restore()`, then `shiny::runApp()` (slower; on Windows a package may need Rtools).
+
+It then runs offline from the processed data in the package (`r v$release_short`). Rebuilding the data from the raw IRCC files is optional (below).
+
+# Contents of the package (folder `temporary-workers-dashboard/`)
+
+| Path | What it does |
+|-------------------|-----------------------------------------------------|
+| `app.R` | Main app: loads the data, builds the page (header, filters, `r v$n_tabs_word` tabs), links filters to tabs. |
+| `R/data.R` | Reads the two IRCC CSV files, checks their layout, handles hidden small counts ("\-\-", counted as 0), builds the table the app uses, and loads the saved release. |
+| `R/calc.R` | All calculations and wording: totals, shares, changes, rankings, headline cards, notes, chart titles, undercount flags. |
+| `R/mod_*.R` (`r v$n_tab_mods_word` files) | One file per tab: `r v$tab_mods`. |
+| `R/assistant.R`, `R/mod_help.R` | Help tab: an optional AI assistant (Google Gemini) that answers from the dashboard's own text and figures, with limits on question length and number. It needs a Gemini API key in `GEMINI_API_KEY`, which is **not** included; without it the Help tab says the assistant is unavailable and everything else works. |
+| `R/mod_downloads.R`, `exports/`, `tools/build_exports.R` | Downloads tab and the three PDFs on it (this one, the user guide and the note on work permits for B.C.). `tools/build_exports.R` rebuilds them from the data with no AI; it needs Chrome, Python (python-docx) and LibreOffice. |
+| `R/theme.R`, `www/styles.css` | Colours, chart style, source lines, policy-event notes, page style. |
+| `data/baseline.rds`, `data/cache.rds` | The `r v$release_phrase`, processed; the dashboard shows the first; the second is used only in live mode if a download fails. |
+| `renv.lock` | Exact package versions for `renv::restore()`. |
+| `README.md`, `data_profile.md` | How to run and test; data profile (layout, definitions, checks against IRCC totals, assumptions). |
+| `tests/` | Automated checks, run by `tests/testthat.R`: the data, every calculation, every tab with every filter, the running app in a browser, the live download, the Help assistant with a simulated AI service (no real calls), the Downloads PDFs, wording and speed. |
+| `tools/` | `get_testdata.R` (IRCC files for the tests), `build_cache_and_profile.R` (rebuilds the data), `build_exports.R` (the Downloads PDFs), `deploy.R` (publishes to shinyapps.io; no passwords or keys stored), `windows_check.R` (one-command check). |
+
+# Tests
+
+To run them (needs internet and Chrome or Chromium), from the project folder in a Terminal or Command Prompt: `Rscript tools/get_testdata.R`, then `Rscript tests/testthat.R`; or in the R console: `source("tools/get_testdata.R")`, then `system2(file.path(R.home("bin"), "Rscript"), "tests/testthat.R")`. `get_testdata.R` downloads IRCC's current files, which may be a newer release, so a few data checks may differ.
+
+# Data: live mode and rebuilding (optional, for maintainers)
+
+**Live mode**: in R, `Sys.setenv(TW_DATA_SOURCE = "live")`, then `shiny::runApp()`. The app downloads the two IRCC files at startup and compares months over 12 months older than the release's latest month with the saved release. If more than 2% of those values differ by over 1% (and 5 permits), or a full-year Canada total by program differs by over 1%, the download is not used and the saved copy is shown with a notice. So a large real IRCC revision of older months would also keep the saved data. In live mode the PDFs on the Downloads tab may describe an older release; the tab says so.
+
+<div class="facts">
+
+**To rebuild the data**
+
+1. Download the [IRCC TFWP monthly CSV](https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-TFWP-PT_program.csv) and the [IRCC IMP monthly CSV](https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-IMP-PT_program.csv).
+2. Put both, names unchanged, in a new folder `raw_profile/` in the project folder.
+3. Back up `data/` (it is rewritten), then run `Rscript tools/build_cache_and_profile.R`, then `Rscript tools/build_exports.R` for the PDFs.
+
+IRCC updates the files monthly, so a later download will likely not reproduce the `r v$release_date` numbers exactly (the release date in the header, set in `R/data.R`, would also need updating).
+</div>

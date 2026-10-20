@@ -1,0 +1,59 @@
+---
+title: "How to use this dashboard"
+subtitle: "`r params$v$app_title`"
+author: "Mohsen Fazeli"
+date: "`r params$v$built_for`"
+params:
+  v: NULL
+output:
+  html_document:
+    theme: null
+    highlight: null
+    mathjax: null
+    self_contained: true
+---
+
+```{r setup, include = FALSE}
+v <- params$v
+```
+
+# Dashboard link
+
+<div class="link-box">**Open the dashboard:** [`r v$link`](`r v$link`)</div>
+
+It works in any modern web browser on a computer, tablet or phone. No login or software is needed. The first visit can take up to a minute while the server starts.
+
+<div class="facts">
+
+- **Permits, not people.** Each count is a work permit issued (new permits and renewals). IRCC's dataset is titled "work permit holders", but a person who gets two permits in a year is counted twice.
+- **Fixed data.** The dashboard shows the `r v$release_phrase` and does not update by itself. IRCC calls the data preliminary; recent months may be revised.
+- **IMP covers only part of all IMP permits.** IRCC's IMP table leaves out people in Canada mainly for other reasons, such as asylum claimants or people applying on humanitarian grounds.
+- **Small counts are hidden.** IRCC shows 0 to 5 as "\-\-"; the dashboard counts them as 0, so totals are minimums. ⚠ (Geography tab) marks a place whose hidden counts, at up to 5 each, could add more than 10% to its total.
+</div>
+
+# What you can learn
+
+How many work permits were issued in Canada, where (each province and territory), under which program, and how this changed from `r v$first_month` to `r v$latest_month`. The Temporary Foreign Worker Program (TFWP) usually needs a Labour Market Impact Assessment (LMIA) by the employer; the International Mobility Program (IMP) does not.
+
+<figure class="shot-big"><img src="`r v$overview_img`" alt="Overview tab with numbered labels: 1 filters, 2 tabs, 3 headline cards, 4 chart tools, 5 notes"><figcaption>Overview tab. **1** Filters (apply to every tab). **2** Tabs. **3** Headline cards. **4** Chart tools: hover for exact values; the camera saves an image. **5** Notes: *What the data show* (`r v$n_highlights` fixed points for Canada) and *For your selection* (`r v$n_takeaways` points that follow the filters).</figcaption></figure>
+
+# How to use it
+
+- **Filters** (left sidebar; on a phone, the *Filters* button): *Period* slider and quick buttons; *View* (*Monthly* or *Annual*); *Geography* (Canada or one province or territory); *Program* (both, TFWP or IMP). `r v$partyear_sentence` *Reset filters* sets the full period, Annual view, Canada and both programs`r v$reset_tail`.
+- **Headline cards** follow Geography, Program and the **last month** of the Period (by default `r v$latest_month`): permits from January to that month; the change from the same months a year earlier; the IMP / TFWP split (with one program, its share of all permits); and that month compared with a year earlier.
+- **Tabs:**
+  - *Trends*: each program over time and the change from a year earlier; numbered dotted lines mark policy changes for context only, not cause.
+  - *Geography*: places ranked, with share of Canada and *Growth* (last 12 months of the period vs its first 12, named in the header). Clicking a bar selects that place on every tab (pick Canada or *Reset filters* to go back). With one place selected, a chart shows its % change from a year earlier next to Canada's (with Canada selected: the five largest places' shares). *Share of Canada's change*: `r v$contrib_example`; a negative share means the opposite direction to Canada.
+  - *Composition*: categories within each program, as shares or numbers; *count only permits with a known category* leaves out "Unknown IMP".
+  - *Data*: rows by month (or year), program and category, with a CSV of the same columns (period, geography, program, category, permits, months, hidden small counts, possible undercount).
+  - *About the data*: definitions, limitations and sources.
+  - *Downloads*: this guide, a description of the code package, and a short note on work permits for B.C., as PDFs built for the release shown.
+  - *Help*: ask a question; an AI service (Google Gemini) answers from the dashboard's own text and figures. Answers can be wrong, so check the charts. It may be unavailable if the free daily limit is reached; the rest still works.
+
+# Run it on your own computer
+
+With the code package (folder `temporary-workers-dashboard`) and R, the dashboard also runs on your own computer, offline after a one-time install of R packages. *About the package and files* (on the *Downloads* tab) gives the steps and lists what the package holds.
+
+# Data sources
+
+All numbers come only from the <a href="https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-TFWP-PT_program.csv">IRCC TFWP monthly CSV</a> and the <a href="https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-IMP-PT_program.csv">IRCC IMP monthly CSV</a>, from the IRCC dataset <a href="https://open.canada.ca/data/en/dataset/360024f2-17e9-4558-bfc1-3616485d65b9">Temporary Residents: TFWP and IMP Work Permit Holders – Monthly IRCC Updates</a> (Open Government Licence – Canada). Other official sources are used only for the policy-event notes and the note on permits and arrivals; all are listed in *About the data*.

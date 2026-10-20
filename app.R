@@ -11,6 +11,7 @@
 #   R/theme.R       colours, fonts, chart helpers, source lines
 #   R/mod_*.R       one Shiny module per tab
 #   R/assistant.R   Help tab assistant (optional; needs GEMINI_API_KEY)
+#   R/mod_downloads.R  Downloads tab: PDFs made by tools/build_exports.R (exports/)
 # Shiny automatically sources every file in R/ before running this file.
 # =============================================================================
 
@@ -173,6 +174,7 @@ ui <- bslib::page_navbar(
   bslib::nav_panel("Composition", composition_ui("composition")),
   bslib::nav_panel("Data", data_ui("data")),
   bslib::nav_panel("About the data", about_ui("about")),
+  bslib::nav_panel("Downloads", downloads_ui("downloads", DATA, META)),
   bslib::nav_panel("Help", help_ui("help"))
 )
 
