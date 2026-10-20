@@ -105,15 +105,8 @@ composition_server <- function(id, sel, data, meta, detail = NULL) {
                           margin = list(b = 40))
     }
     share_title <- function(prog) {
-      s <- sel()
-      if (!prog %in% s$programs) return(sprintf("%s mix over time", prog))
-      m <- period_mix() |> dplyr::filter(program == prog)
-      if (nrow(m) == 0 || sum(m$value) == 0) return(sprintf("%s mix over time", prog))
-      # The share is for the whole selected period (all months), so the
-      # period is named in the title.
-      sprintf("%s: the largest category was %s, with %s of %s permits in %s\u2013%s", prog,
-              as.character(m$category[1]), fmt_share(m$share[1], 0), prog,
-              fmt_month_short(s$start), fmt_month_short(s$end))
+      chart_title("share", sel(), prog = prog, as_number = identical(input$measure, "number"),
+                  known_only = prog == "IMP" && isTRUE(input$known_only))
     }
     output$share_tfwp_title <- shiny::renderText(share_title("TFWP"))
     output$share_imp_title  <- shiny::renderText(share_title("IMP"))
@@ -130,16 +123,7 @@ composition_server <- function(id, sel, data, meta, detail = NULL) {
 
     # Category totals for the whole period.
     output$mix_title <- shiny::renderText({
-      s <- sel()
-      m <- period_mix()
-      if (nrow(m) == 0 || sum(m$value) == 0)
-        return(sprintf("Permits by category, %s\u2013%s, %s", fmt_month_short(s$start),
-                       fmt_month_short(s$end), s$geography))
-      top <- m[which.max(m$value), ]
-      # Title states the point: the largest category and its share of all permits.
-      sprintf("%s (%s) was the largest category: %s of all permits, %s, %s\u2013%s",
-              top$category, top$program, fmt_share(top$value / sum(m$value), 0),
-              s$geography, fmt_month_short(s$start), fmt_month_short(s$end))
+      chart_title("mix", sel())
     })
     output$mix_plot <- plotly::renderPlotly({
       m <- period_mix()
@@ -169,9 +153,7 @@ composition_server <- function(id, sel, data, meta, detail = NULL) {
       category_detail_table(detail, s$start, s$end, s$geography, s$programs)
     })
     output$detail_title <- shiny::renderText({
-      s <- sel()
-      sprintf("IRCC program names in each category, %s, %s\u2013%s", s$geography,
-              fmt_month_short(s$start), fmt_month_short(s$end))
+      chart_title("detail", sel())
     })
     output$detail_table <- DT::renderDT({
       DT::datatable(detail_tbl(), rownames = FALSE,

@@ -31,10 +31,7 @@ data_server <- function(id, sel, data, meta) {
                          s$resolution, meta$latest_month, s$geography)
     })
     output$title <- shiny::renderText({
-      s <- sel()
-      sprintf("%s data: %s, %s, %s\u2013%s (%s rows)", s$resolution,
-              program_label(s$program_choice), s$geography,
-              fmt_month_short(s$start), fmt_month_short(s$end), fmt_n(nrow(tbl())))
+      chart_title("data", sel())
     })
     output$table <- DT::renderDT({
       t <- tbl()

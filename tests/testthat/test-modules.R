@@ -18,7 +18,7 @@ OUTPUTS <- list(
                "kpi_split_sub", "kpi_latest", "kpi_latest_title", "kpi_latest_sub",
                "headline_title", "headline_plot", "takeaways", "highlights"),
   trends = c("trend_title", "trend_plot", "yoy_title", "yoy_plot", "trend_source"),
-  geography = c("rank_title", "rank_plot", "rank_table", "compare_title", "compare_plot",
+  geography = c("rank_title", "rank_plot", "rank_table_title", "rank_table", "compare_title", "compare_plot",
                 "contrib_title", "contrib_plot"),
   composition = c("share_tfwp_title", "share_tfwp_plot", "share_imp_title", "share_imp_plot",
                   "mix_title", "mix_plot", "unknown_note", "detail_title", "detail_table"),
@@ -219,7 +219,8 @@ test_that("event lines on the trend chart carry their sources", {
 test_that("external feedback: YoY shows both programs, merged event label, table headers, card precision", {
   tr <- render_all("trends", make_sel("Canada", "Both", "Annual"))
   expect_match(tr$yoy_plot, "Both programs", fixed = TRUE)
-  expect_match(tr$yoy_title, "both programs (up|down)")
+  expect_match(tr$yoy_title, "^Change from a year earlier in work permits issued, by program, Canada, ")
+  expect_no_match(tr$yoy_title, "%")
   expect_match(tr$trend_plot, "2024: study cap & resident target & TFWP limits & graduate permit rules", fixed = TRUE)
   tf <- render_all("trends", make_sel("Canada", "TFWP", "Annual"))
   expect_no_match(tf$yoy_plot, "Both programs", fixed = TRUE)

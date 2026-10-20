@@ -130,14 +130,10 @@ test_that("download table matches the selection and resolution", {
   expect_equal(sum(a$`Work permits issued`), kpi_total(sel))
 })
 
-test_that("takeaways and titles are plain sentences with thousands separators", {
+test_that("takeaways are plain sentences with thousands separators", {
   tk <- make_takeaways(d, "2015-01-01", latest, "Canada", "Both")
   expect_length(tk, 5)
   expect_match(tk[1], "^[0-9]{1,3}(,[0-9]{3})+ TFWP and IMP work permits were issued across Canada from January 2015 to July 2026, an average of [0-9,]+ a month\\. These are permits, not people")
-  expect_match(trend_title(filter_selection(d, "2015-01-01", latest), "Canada", "Both"),
-               "the last 12 months were [0-9]+\\.[0-9]% (higher|lower) than the first 12 months selected$")
-  expect_match(trend_title(filter_selection(d, "2026-01-01", latest), "Canada", "Both"),
-               "Jul 2026 was ([0-9]+\\.[0-9]% (higher|lower) than|about the same as) Jan 2026$")
 })
 
 test_that("takeaways tell a story: peak and change since, year to date, mix, where", {
@@ -228,23 +224,55 @@ test_that("no R file uses non-portable date format codes (Windows prints them li
   expect_identical(hits, NULL, info = paste(hits, collapse = "\n"))
 })
 
-test_that("trend title: same precision as the change card, and the annual view compares calendar years", {
-  sel <- filter_selection(d, "2015-01-01", latest)
-  pc <- kpi_period_change(sel)
-  # Monthly title uses the card's number with the card's precision (1 decimal)
-  expect_match(trend_title(sel, "Canada", "Both", "Monthly", latest),
-               sub("^\\+", "", fmt_pct(pc$change)), fixed = TRUE)
-  # Annual: last full year vs first full year, computed independently
-  ann <- tapply(d$value[d$geography == "Canada"], d$year[d$geography == "Canada"], sum)
-  full <- ann[names(ann) < format(latest, "%Y")]
-  ch <- unname(full[length(full)] / full[1] - 1)
-  expect_equal(trend_title(sel, "Canada", "Both", "Annual", latest),
-               sprintf("Work permits in Canada (TFWP and IMP): %s was %s higher than %s; %s covers Jan\u2013%s only",
-                       names(full)[length(full)], sub("^\\+", "", fmt_pct(ch)), names(full)[1],
-                       format(latest, "%Y"), month.abb[as.integer(format(latest, "%m"))]))
-  # Fewer than two full years in the Annual view: falls back to the month rule
-  expect_match(trend_title(filter_selection(d, "2026-01-01", latest), "Canada", "Both", "Annual", latest),
-               "Jul 2026 was")
+test_that("chart titles name what is shown and follow the filters", {
+  s <- list(start = as.Date("2015-01-01"), end = latest, resolution = "Annual",
+            geography = "Canada", program_choice = "Both", last_moy = NULL)
+  mo <- month.abb[as.integer(format(latest, "%m"))]; yr <- format(latest, "%Y")
+  per <- sprintf("2015 to %s (Jan\u2013%s)", yr, mo)
+  expect_equal(chart_title("headline", s), paste0("Work permits issued by program, Canada, ", per))
+  expect_equal(chart_title("trend", s), paste0("Work permits issued, both programs and each program, Canada, ", per))
+  expect_equal(chart_title("yoy", s), paste0("Change from a year earlier in work permits issued, by program, Canada, ", per))
+  expect_equal(chart_title("rank", s), sprintf("Work permits issued by province and territory, TFWP and IMP, Jan 2015 to %s %s", mo, yr))
+  expect_equal(chart_title("compare", s), paste0("Share of Canada's work permits issued, five largest provinces, TFWP and IMP, ", per))
+  lab <- sprintf("Jan\u2013%s %s vs Jan\u2013%s %d", mo, yr, mo, as.integer(yr) - 1)
+  expect_equal(chart_title("contrib", s, label = lab),
+               paste0("Share of Canada's change in work permits issued, by province and territory, TFWP and IMP, ", lab))
+  expect_equal(chart_title("share", s, prog = "TFWP"), paste0("TFWP work permits issued by category, Canada, ", per))
+  expect_equal(chart_title("share", s, prog = "IMP", as_number = FALSE, known_only = TRUE),
+               paste0("Share of IMP work permits issued by category (Unknown IMP left out), Canada, ", per))
+  # Filters: province, one program, same months, monthly view, one part year
+  s2 <- utils::modifyList(s, list(geography = "Ontario", program_choice = "TFWP", last_moy = 7L))
+  expect_equal(chart_title("headline", s2), sprintf("TFWP work permits issued, Ontario, Jan\u2013Jul of each year, 2015 to %s", yr))
+  expect_equal(chart_title("yoy", s2), sprintf("Change from a year earlier in TFWP work permits issued, Ontario, Jan\u2013Jul of each year, 2015 to %s", yr))
+  expect_match(chart_title("compare", utils::modifyList(s2, list(last_moy = NULL))),
+               "^Change from a year earlier in work permits issued, Ontario and Canada, TFWP, 2015 to ")
+  expect_equal(chart_title("trend", utils::modifyList(s, list(resolution = "Monthly"))),
+               sprintf("Work permits issued, both programs and each program, Canada, Jan 2015 to %s %s, by month", mo, yr))
+  expect_equal(chart_title("headline", utils::modifyList(s, list(start = as.Date(paste0(yr, "-01-01"))))),
+               sprintf("Work permits issued by program, Canada, %s (Jan\u2013%s)", yr, mo))
+  # Change-from-a-year-earlier titles start where the comparison can start
+  expect_equal(chart_title("yoy", yoy_title_sel(s, min(d$month))),
+               sprintf("Change from a year earlier in work permits issued, by program, Canada, 2016 to %s (Jan\u2013%s)", yr, mo))
+  expect_equal(yoy_title_sel(utils::modifyList(s, list(start = as.Date("2018-03-01"))), min(d$month))$start, as.Date("2018-03-01"))
+  expect_equal(chart_title("headline", utils::modifyList(s, list(end = as.Date("2024-12-01")))),
+               "Work permits issued by program, Canada, 2015 to 2024")
+})
+
+test_that("chart titles carry no numbers other than dates and no trend wording", {
+  base <- list(start = as.Date("2015-01-01"), end = latest, resolution = "Annual",
+               geography = "Canada", program_choice = "Both", last_moy = NULL)
+  sels <- list(base, utils::modifyList(base, list(geography = "British Columbia", program_choice = "IMP")),
+               utils::modifyList(base, list(resolution = "Monthly")),
+               utils::modifyList(base, list(last_moy = 7L)))
+  kinds <- c("headline", "trend", "yoy", "rank", "table", "compare", "contrib", "mix", "detail", "data")
+  tt <- unlist(lapply(sels, function(s) c(
+    vapply(kinds, chart_title, "", s = s, label = "Jan\u2013Jul 2026 vs Jan\u2013Jul 2025"),
+    chart_title("share", s, prog = "TFWP"), chart_title("share", s, prog = "IMP", as_number = FALSE, known_only = TRUE))))
+  expect_no_match(tt, "%")
+  # the only numbers are four-digit years
+  expect_no_match(gsub("\\b(19|20)[0-9]{2}\\b", "", tt), "[0-9]")
+  expect_no_match(tt, "\\b(higher|lower|up|down|rose|fell|grew|increase|decrease|largest category|most|made up|received|went from|was|were)\\b",
+                  ignore.case = TRUE)
 })
 
 test_that("takeaways say 'so far' only for a true year to date", {
@@ -256,24 +284,6 @@ test_that("takeaways say 'so far' only for a true year to date", {
   # The figure is the selected months vs the same months a year earlier
   cur <- sum(d$value[d$geography == "Canada" & d$month >= as.Date("2025-01-01") & d$month <= as.Date("2025-07-01")])
   expect_true(any(grepl(paste0(fmt_n(cur), " permits were issued"), h, fixed = TRUE)))
-})
-
-test_that("year-over-year title names each program and the combined total, from the data", {
-  cn <- d[d$geography == "Canada", ]
-  full <- dplyr::bind_rows(cn, dplyr::mutate(cn, program = "Total"))
-  y <- yoy_series(full, "2015-01-01", latest, "Annual", by = "program", latest_month = latest)
-  t <- yoy_title_text(y)
-  ytd <- function(pr, yr) {
-    x <- if (pr == "Total") cn else cn[cn$program == pr, ]
-    sum(x$value[x$year == yr & as.integer(format(x$month, "%m")) <= as.integer(format(latest, "%m"))])
-  }
-  yr <- as.integer(format(latest, "%Y"))
-  w <- function(pr) { ch <- ytd(pr, yr) / ytd(pr, yr - 1) - 1
-                      paste(dir_word(ch), sub("^[+-]", "", fmt_pct(ch))) }
-  expect_equal(t, sprintf("%s (Jan\u2013%s) compared with the same months a year earlier: IMP %s, TFWP %s, both programs %s",
-                          yr, month.abb[as.integer(format(latest, "%m"))], w("IMP"), w("TFWP"), w("Total")))
-  one <- yoy_series(cn[cn$program == "TFWP", ], "2015-01-01", latest, "Annual", latest_month = latest)
-  expect_no_match(yoy_title_text(one), "both programs")
 })
 
 test_that("chart colours have at least 3:1 contrast with the white background", {

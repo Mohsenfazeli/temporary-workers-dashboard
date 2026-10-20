@@ -140,7 +140,7 @@ test_that("the app opens on the frozen release by default, with the right cards 
   expect_equal(app$get_value(output = "overview-kpi_ytd"), "673,280")          # the end month is unchanged
   app$click("qp_full"); app$wait_for_idle(800)
   app$set_inputs(same_months = TRUE); app$wait_for_idle(800)
-  expect_match(app$get_value(output = "overview-headline_title"), "(Jan\u2013Jul)", fixed = TRUE)
+  expect_match(app$get_value(output = "overview-headline_title"), "Jan\u2013Jul of each year, 2015 to 2026", fixed = TRUE)
   expect_no_match(app$get_value(output = "overview-headline_title"), "shown separately")
 })
 

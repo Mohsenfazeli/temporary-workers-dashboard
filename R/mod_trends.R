@@ -25,11 +25,7 @@ trends_server <- function(id, sel, data, meta) {
     })
 
     output$trend_title <- shiny::renderText({
-      s <- sel()
-      paste(trend_title(sel_df(), s$geography, s$program_choice, s$resolution,
-                        meta$latest_month),
-            # The annual title already names the years compared
-            if (s$resolution == "Annual") "" else "(by month)") |> trimws()
+      chart_title("trend", sel())      # names what is shown (R/calc.R, tested)
     })
 
     # Is the chart narrow (under 600 px, e.g. a phone)? A reactiveVal only
@@ -143,7 +139,7 @@ trends_server <- function(id, sel, data, meta) {
                  latest_month = meta$latest_month)
     })
     output$yoy_title <- shiny::renderText({
-      yoy_title_text(yoy())          # names each program (R/calc.R, tested)
+      chart_title("yoy", yoy_title_sel(sel(), min(data$month)))
     })
     output$yoy_plot <- plotly::renderPlotly({
       s <- sel(); y <- yoy()

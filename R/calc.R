@@ -649,71 +649,76 @@ make_takeaways <- function(data, start, end, geography, program_choice) {
   unname(out[!is.na(out)])
 }
 
-# ---- 12. Point-stating chart titles -----------------------------------------
-#' Title for the year-over-year chart, naming every plotted series for the
-#' latest period, e.g. "2026 (Jan-Jul) compared with the same months a year
-#' earlier: IMP up 63.3%, TFWP down 4.8%, both programs up 45.8%". `y` is yoy_series() output with a
-#' `program` column ("TFWP", "IMP" and, with both programs, "Total").
-yoy_title_text <- function(y) {
-  y <- y[!is.na(y$yoy), ]
-  if (nrow(y) == 0) return("Change from a year earlier (not available for this period)")
-  last <- y[y$period == max(y$period), ]
-  part <- function(pr) {
-    r <- last[last$program == pr, ]
-    if (nrow(r) == 0) return(NULL)
-    paste(dir_word(r$yoy), sub("^[+-]", "", fmt_pct(r$yoy)))
-  }
-  progs <- intersect(c("IMP", "TFWP"), last$program)
-  each <- paste(vapply(progs, function(pr) paste(pr, part(pr)), character(1)), collapse = ", ")
-  tot <- if ("Total" %in% last$program) sprintf(", both programs %s", part("Total")) else ""
-  # A part year (e.g. "2026 (Jan-Jul)") is compared with the same months.
-  basis <- if (grepl("(", last$label[1], fixed = TRUE)) "the same months a year earlier" else "a year earlier"
-  sprintf("%s compared with %s: %s%s", last$label[1], basis, each, tot)
+# ---- 12. Descriptive figure titles --------------------------------------------
+# Every chart and table title names WHAT is shown (measure, breakdown, place,
+# program and period), never the trend: no numbers and no "higher", "up",
+# "largest" etc. The point of each chart is told in the "What the data show"
+# panel and the source lines, not in the title.
+
+#' Months as text: "Jan 2015 to Jul 2026" (or "Jul 2026" for one month).
+range_text <- function(start, end) {
+  if (format(as.Date(start), "%Y-%m") == format(as.Date(end), "%Y-%m")) return(fmt_month_short(start))
+  paste(fmt_month_short(start), "to", fmt_month_short(end))
 }
 
+#' Period as shown on a chart, following the Annual/Monthly view:
+#'   Annual             "2015 to 2026 (Jan\u2013Jul)"   (part years carry their months)
+#'   Annual, same months "Jan\u2013Jul of each year, 2015 to 2026"
+#'   Monthly            "Jan 2015 to Jul 2026, by month"
+period_text <- function(start, end, resolution = "Annual", last_moy = NULL) {
+  start <- as.Date(start); end <- as.Date(end)
+  sy <- as.integer(format(start, "%Y")); ey <- as.integer(format(end, "%Y"))
+  sm <- as.integer(format(start, "%m")); em <- as.integer(format(end, "%m"))
+  if (resolution != "Annual") return(paste0(range_text(start, end), ", by month"))
+  if (!is.null(last_moy)) {
+    mtx <- if (last_moy == 1) "Jan" else paste0("Jan\u2013", month.abb[last_moy])
+    return(if (sy == ey) paste(mtx, sy) else sprintf("%s of each year, %d to %d", mtx, sy, ey))
+  }
+  if (sy == ey) return(year_label(sy, sm, em, end))
+  paste(year_label(sy, sm, 12, end), "to", year_label(ey, 1, em, end))
+}
 
-#' Headline for the trend chart, e.g. "Work permits in Canada (TFWP and IMP):
-#' 2025 was 184.9% higher than 2015; 2026 covers Jan-Jul only".
-trend_title <- function(df, geography, program_choice, resolution = "Monthly",
-                        latest_month = max(df$month)) {
-  what <- sprintf("Work permits in %s (%s)", geography, program_label(program_choice))
-  # "264.7% higher than", "12.0% lower than" or "about the same as" (within +/-2%).
-  # One decimal, the same precision as the change card on the Overview.
-  rel_text <- function(ch) {
-    size <- sub("^[+-]", "", fmt_pct(ch, 1))
-    if (ch >= 0.02) paste(size, "higher than") else if (ch <= -0.02) paste(size, "lower than")
-    else "about the same as"
-  }
-  # Annual view: compare calendar years that are visible on the chart, i.e.
-  # the last full year with the first full year (part-years are noted).
-  if (resolution == "Annual") {
-    ann <- summarise_series(df, "Annual", by = character(0), latest_month = latest_month)
-    full <- ann[!ann$partial, ]
-    if (nrow(full) >= 2) {
-      ch <- pct_change(full$value[nrow(full)], full$value[1])
-      if (!is.na(ch)) {
-        # Part years are named with the months they cover, e.g.
-        # "; 2026 covers Jan-Jul only"
-        part <- ann$label[ann$partial]
-        note <- if (length(part)) paste0("; ", paste(sub("^(\\d{4}) \\((.*)\\)$", "\\1 covers \\2", part),
-                                                     collapse = " and "), " only") else ""
-        return(sprintf("%s: %s was %s %s%s", what, full$label[nrow(full)], rel_text(ch),
-                       full$label[1], note))
-      }
-    }
-  }
-  # Monthly view (or fewer than two full years): the rule used by the
-  # change card (last 12 vs first 12 months, or last vs first month).
-  pc <- kpi_period_change(df)
-  if (is.na(pc$change)) {
-    return(what)
-  }
-  if (pc$method == "12m") {
-    sprintf("%s: the last 12 months were %s the first 12 months selected", what, rel_text(pc$change))
-  } else {
-    sprintf("%s: %s was %s %s", what, sub(" vs .*", "", pc$label), rel_text(pc$change),
-            sub(".* vs ", "", pc$label))
-  }
+#' Change-from-a-year-earlier charts start one year after the data do (the
+#' first year has nothing to compare with), so their titles start there too.
+#' Returns the selection with `start` moved to that month when needed.
+yoy_title_sel <- function(s, first_month) {
+  first_yoy <- seq(as.Date(first_month), by = "12 months", length.out = 2)[2]
+  if (as.Date(s$start) < first_yoy) s$start <- first_yoy
+  s
+}
+
+#' Title for every chart and table, from the sidebar selection `s` (start,
+#' end, resolution, geography, program_choice, last_moy).
+#'   kind  "headline" (Overview), "trend", "yoy" (Trends), "rank", "table",
+#'         "compare", "contrib" (Geography), "share" (Composition, with
+#'         `prog`, `as_number`, `known_only`), "mix", "detail", "data"
+#'   label for "contrib": the months compared, e.g. "Jan\u2013Jul 2026 vs Jan\u2013Jul 2025"
+chart_title <- function(kind, s, prog = NULL, as_number = TRUE, known_only = FALSE, label = NULL) {
+  geo <- s$geography; pl <- program_label(s$program_choice)
+  both <- identical(s$program_choice, "Both")
+  per <- period_text(s$start, s$end, s$resolution, s$last_moy)
+  rng <- range_text(s$start, s$end)
+  permits <- if (both) "Work permits issued" else paste(s$program_choice, "work permits issued")
+  switch(kind,
+    headline = if (both) sprintf("Work permits issued by program, %s, %s", geo, per)
+               else sprintf("%s, %s, %s", permits, geo, per),
+    trend    = if (both) sprintf("Work permits issued, both programs and each program, %s, %s", geo, per)
+               else sprintf("%s, %s, %s", permits, geo, per),
+    yoy      = if (both) sprintf("Change from a year earlier in work permits issued, by program, %s, %s", geo, per)
+               else sprintf("Change from a year earlier in %s work permits issued, %s, %s", s$program_choice, geo, per),
+    rank     = sprintf("Work permits issued by province and territory, %s, %s", pl, rng),
+    table    = sprintf("Work permits issued, share of Canada and growth, by province and territory, %s, %s", pl, rng),
+    compare  = if (geo == "Canada") sprintf("Share of Canada's work permits issued, five largest provinces, %s, %s", pl, per)
+               else sprintf("Change from a year earlier in work permits issued, %s and Canada, %s, %s", geo, pl, per),
+    contrib  = sprintf("Share of Canada's change in work permits issued, by province and territory, %s, %s", pl, label),
+    share    = sprintf("%s%s work permits issued by category%s, %s, %s",
+                       if (as_number) "" else "Share of ", prog,
+                       if (!as_number && known_only) " (Unknown IMP left out)" else "", geo, per),
+    mix      = sprintf("Work permits issued by category and program, %s, %s, %s", geo, pl, rng),
+    detail   = sprintf("IRCC program names in each category, %s, %s", geo, rng),
+    data     = sprintf("Work permits issued by %s, program and category, %s, %s, %s",
+                       if (s$resolution == "Annual") "year" else "month", geo, pl, rng),
+    stop("unknown title kind: ", kind))
 }
 
 # -----------------------------------------------------------------------------

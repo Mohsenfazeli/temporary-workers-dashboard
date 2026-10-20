@@ -20,7 +20,7 @@ geography_ui <- function(id) {
       bslib::card(
         full_screen = TRUE,
         bslib::card_header(htmltools::tags$h2(class = "chart-title",
-          "Provinces and territories: permits, share of Canada and growth")),
+          shiny::textOutput(ns("rank_table_title"), inline = TRUE))),
         bslib::card_body(DT::DTOutput(ns("rank_table"))),
         bslib::card_footer(shiny::uiOutput(ns("table_source")))
       )
@@ -37,11 +37,10 @@ geography_server <- function(id, sel, data, meta) {
     rank <- shiny::reactive({ s <- sel(); geo_ranking(data, s$start, s$end, s$programs) })
 
     output$rank_title <- shiny::renderText({
-      r <- rank(); s <- sel()
-      top3 <- sum(r$share[1:3], na.rm = TRUE)
-      sprintf("%s, %s and %s received %s of %s permits, %s\u2013%s",
-              r$geography[1], r$geography[2], r$geography[3], fmt_share(top3, 0),
-              program_label(s$program_choice), fmt_month_short(s$start), fmt_month_short(s$end))
+      chart_title("rank", sel())
+    })
+    output$rank_table_title <- shiny::renderText({
+      chart_title("table", sel())
     })
     output$rank_plot <- plotly::renderPlotly({
       r <- rank(); s <- sel()
@@ -132,21 +131,10 @@ geography_server <- function(id, sel, data, meta) {
                       latest_month = meta$latest_month)
     })
     output$compare_title <- shiny::renderText({
-      s <- sel(); c <- cmp()
-      if (is.null(c)) {
-        sh <- shares()
-        lead <- sh[sh$place == levels(sh$place)[1], ]
-        if (nrow(lead) < 2) return("Share of Canada's permits held by the five largest provinces")
-        return(sprintf("%s's share of Canada's %s permits went from %s in %s to %s in %s. Choose a province in the sidebar to compare it with Canada",
-                       lead$place[1], program_label(s$program_choice),
-                       fmt_share(lead$share[1], 0), lead$label[1],
-                       fmt_share(lead$share[nrow(lead)], 0), lead$label[nrow(lead)]))
-      }
-      sh <- sum(c$value_pt) / sum(c$value_canada)
-      sprintf("%s received %s of Canada's %s permits, %s\u2013%s. Change from a year earlier: %s and Canada%s",
-              s$geography, fmt_share(sh), program_label(s$program_choice),
-              fmt_month_short(s$start), fmt_month_short(s$end), s$geography,
-              if (s$resolution == "Annual") "" else ", by month")
+      # This chart ignores the "same months" option, so its title does too
+      s <- utils::modifyList(sel(), list(last_moy = NULL))
+      # Province view: change from a year earlier, which starts a year after the data
+      chart_title("compare", if (s$geography == "Canada") s else yoy_title_sel(s, min(data$month)))
     })
     output$compare_plot <- plotly::renderPlotly({
       s <- sel(); c <- cmp()
@@ -212,18 +200,7 @@ geography_server <- function(id, sel, data, meta) {
     # selected period (by default 2026 so far) vs the same months a year earlier.
     contrib <- shiny::reactive(contribution_to_change(data, sel()$end, sel()$programs))
     output$contrib_title <- shiny::renderText({
-      x <- contrib(); s <- sel(); ch <- attr(x, "canada_change")
-      if (is.na(ch) || ch == 0) return(sprintf("Contribution to Canada's change in %s permits, %s",
-                                               program_label(s$program_choice), attr(x, "label")))
-      word <- if (ch > 0) "increase" else "decrease"
-      tx <- sprintf("%s made up %s of Canada's %s in %s permits, %s",
-                    x$geography[1], fmt_share(x$contribution[1]), word,
-                    program_label(s$program_choice), attr(x, "label"))
-      if (s$geography != "Canada" && s$geography != x$geography[1]) {
-        i <- match(s$geography, x$geography)
-        tx <- paste0(tx, "; ", s$geography, ": ", fmt_share(x$contribution[i]))
-      }
-      tx
+      chart_title("contrib", sel(), label = attr(contrib(), "label"))
     })
     output$contrib_plot <- plotly::renderPlotly({
       x <- contrib(); s <- sel()
