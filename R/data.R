@@ -590,7 +590,7 @@ load_data <- function(sources = IRCC_URLS,
 # Tue, 15 Sep 2026 11:30 GMT, and the Open Government catalogue record lists
 # date_modified 2026-09-15. The files were downloaded on October 16, 2026 and
 # were byte-identical to the files IRCC served on October 18, 2026.
-# Update this (with tools/build_cache_and_profile.R) when the baseline is refreshed.
+# Update this (with tools/build_cache_and_profile.R --install) when the baseline is refreshed.
 RELEASE_INFO <- list(
   date        = as.Date("2026-09-15"),
   evidence    = paste("IRCC file 'Last-Modified' date (15 Sep 2026) and the Open Government",

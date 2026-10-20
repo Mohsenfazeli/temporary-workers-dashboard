@@ -13,3 +13,7 @@ raw_profile/
 # Downloads PDFs (built by tools/build_exports.R before each deploy)
 www/exports/
 __pycache__/
+# Offline Windows package parts (built into the zip by tools/build_windows_offline.R; never commit)
+R-portable/
+library/
+THIRD_PARTY_NOTICES.txt

@@ -8,18 +8,23 @@ An interactive dashboard of temporary work permits by province/territory and pro
 ![Trends tab](docs/trends.png)
 
 ## Run it locally
-This repository holds the app code, the processed data and the package list. Internet is needed only once, to install R packages.
+This repository holds the app code, the processed data and the package list.
 
+**Windows, nothing to install:** unzip the offline Windows package (`Mohsen_1B2_offline_windows.zip`, about 200 MB; built with `tools/build_windows_offline.R`, not stored in this repository), open the folder `temporary-workers-dashboard` and double-click `run_dashboard.bat`. It contains R 4.5.0 for Windows (`R-portable/`, the official CRAN build) and every R package the app needs (`library/`, the versions in `renv.lock`), so nothing is installed, no internet is needed, and any R already on the computer is neither used nor changed. The dashboard opens in the browser; close the black window to stop it.
+
+**Any computer with R** (Windows, macOS, Linux; the smaller `Mohsen_1B2.zip`):
 1. Install R from https://cloud.r-project.org (R 4.5 or newer recommended; built and tested with R 4.5.0). RStudio is optional.
 2. Clone or download this repository. Set R's working folder to it (RStudio: *Session > Set Working Directory > Choose Directory…*, or `setwd("C:/path/to/temporary-workers-dashboard")`); `getwd()` should show it.
-3. **Quick run (recommended)**, in the R console: `install.packages("shiny")`, then `shiny::runApp()`. The first run installs about 90 R packages (ready-made versions from CRAN, so usually no extra tools are needed) and can take several minutes; then the dashboard opens in your browser.
-4. **Exact versions (optional)**: `install.packages("renv")`, `renv::restore()`, then `shiny::runApp()` (slower; on Windows a package may need Rtools).
+3. Once, with internet: `install.packages("renv")`, then `renv::restore()` (exact versions; on Windows a package may need Rtools, which the offline package avoids). Quicker alternative: `install.packages("shiny")`; the first `shiny::runApp()` then installs the other packages (about 90, ready-made from CRAN).
+4. Start it: `Rscript tools/run_local.R` in a Terminal or Command Prompt, `shiny::runApp()` in R, or double-click `run_dashboard.bat` on Windows.
+
+**Live data in one line:** `run_dashboard.bat live` (Windows Command Prompt), `Rscript tools/run_local.R live`, or in R `Sys.setenv(TW_DATA_SOURCE = "live"); shiny::runApp()`.
 
 The **Help** tab (optional AI assistant) needs a `GEMINI_API_KEY`, which is not included; without it, everything else works as usual (see *Help assistant* below).
 
 By default the app shows a fixed IRCC release: the two IRCC files as published on September 15, 2026 (January 2015 to July 2026), saved in `data/baseline.rds`. The header says "Data: IRCC open data release of September 15, 2026 (data to July 2026)". The date is IRCC's own: the files' Last-Modified date on the IRCC server and the "date modified" in the Open Government catalogue, both checked on October 18, 2026. Every visitor sees the same numbers, so the figures match the written notes.
 
-Live refresh is an option for maintainers: start the app with `TW_DATA_SOURCE=live` and it downloads the IRCC files at startup. If the IRCC website can't be reached, IRCC changes its file layout, or a download does not match the verified copy for months older than 12 months, the app uses the saved copy in `data/cache.rds` and says so in the header. The cache is only overwritten by a download that passes every check.
+Live refresh is an option: start the app with `TW_DATA_SOURCE=live` (or `live` after the launcher, above) and it downloads the IRCC files at startup. If the IRCC website can't be reached, IRCC changes its file layout, or a download does not match the verified copy for months older than 12 months, the app uses the saved copy in `data/cache.rds` and says so in the header. The cache is only overwritten by a download that passes every check.
 
 ## Data
 Main data (Open Government Licence – Canada; saved as the September 15, 2026 release, or read live with `TW_DATA_SOURCE=live`):
@@ -58,11 +63,13 @@ The **Downloads** tab offers three PDF files built from the same data as the das
 - `R/assistant.R`: the Help assistant (context, limits, Gemini call, fallbacks).
 - `www/styles.css`: government-style visual tweaks.
 - `data/cache.rds`: offline fallback (IRCC data as downloaded on October 16, 2026; replaced on the server only by a download that passes every check).
-- `data/baseline.rds`: the IRCC release of September 15, 2026 that the app shows by default (date in `RELEASE_INFO`, `R/data.R`); never overwritten. Each new download is compared with it for settled months (at least 12 months before its latest month); if more than 2% of cells or any full-year Canada program total (more than 1%) differ, the download is treated as damaged. Refresh it with `tools/build_cache_and_profile.R` when you redeploy with a newer verified release, and update `RELEASE_INFO` to IRCC's date for that release.
+- `data/baseline.rds`: the IRCC release of September 15, 2026 that the app shows by default (date in `RELEASE_INFO`, `R/data.R`); never overwritten. Each new download is compared with it for settled months (at least 12 months before its latest month); if more than 2% of cells or any full-year Canada program total (more than 1%) differ, the download is treated as damaged. Refresh it with `Rscript tools/build_cache_and_profile.R --install` when you redeploy with a newer verified release, and update `RELEASE_INFO` to IRCC's date for that release.
 - `data_profile.md`: data profile, checks and assumptions.
 - `tests/`: testthat and shinytest2 tests.
 - `tools/get_testdata.R`: downloads the two IRCC CSV files into `testdata/` for the tests.
-- `tools/build_cache_and_profile.R`: rebuilds `data/cache.rds` from local copies of the IRCC files in `raw_profile/` (not included; download them first).
+- `tools/build_cache_and_profile.R` (or double-click `rebuild_data.bat`): rebuilds the data from source with nothing to download by hand. It downloads the two IRCC CSV files into `raw_profile/` (older copies are kept), rebuilds the table with the app's own code, runs the checks in `data_profile.md`, and compares the result cell by cell with `data/baseline.rds`. `data/` is not changed (the result is `raw_profile/rebuilt.rds`), so the app keeps showing the September 15, 2026 release. IRCC replaces the files with each monthly release, so a later download is a newer release and the script reports how it differs. `--local` uses files already in `raw_profile/`; `--install` (maintainers) replaces `data/cache.rds` and `data/baseline.rds`.
+- `run_dashboard.bat`, `tools/run_local.R`: start the app in the browser (add `live` for live data); they never install packages.
+- `tools/build_windows_offline.R`: assembles `R-portable/` and `library/` for the offline Windows package (`deliverables/tools/build_1B.sh` puts them in the zip; they are never committed). The offline package also has `THIRD_PARTY_NOTICES.txt`: R is GPL-2 | GPL-3 and every bundled package has an open-source licence that allows redistribution (list with licences and CRAN source links in `library/PACKAGES_BUNDLED.csv`).
 - `exports/`: templates and code for the Downloads PDFs (note facts, text rules, Word builder, guides).
 - `tools/build_exports.R`: builds the Downloads PDFs.
 - `tools/deploy.R`: builds the Downloads PDFs, then publishes to shinyapps.io using the `SHINYAPPS_ACCOUNT`, `SHINYAPPS_TOKEN` and `SHINYAPPS_SECRET` environment variables, or an account already set up on the computer (no secrets stored).
@@ -73,7 +80,7 @@ The **Downloads** tab offers three PDF files built from the same data as the das
 Rscript tools/get_testdata.R          # one-off: local copies of the IRCC files
 Rscript tests/testthat.R               # sets NOT_CRAN itself
 ```
-In the R console instead: `source("tools/get_testdata.R")`, then `system2(file.path(R.home("bin"), "Rscript"), "tests/testthat.R")`. The tests need internet.
+In the R console instead: `source("tools/get_testdata.R")`, then `system2(file.path(R.home("bin"), "Rscript"), "tests/testthat.R")`. The tests need internet and the full package set from `renv::restore()` (the offline Windows library has only what the app needs).
 - The browser tests need Google Chrome or Chromium.
 - The live test reads IRCC directly and skips with a message if IRCC can't be reached.
 - The performance tests time the app starting from the saved copy (`data/cache.rds`; target under 10 s) and filter changes (median under 1 s, none over 2 s). A live start also downloads about 17 MB from IRCC, so it takes longer on a slow connection.

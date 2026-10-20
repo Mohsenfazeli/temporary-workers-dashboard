@@ -142,7 +142,7 @@ Annual national totals (sums of months):
 ## 13. Files
 - `R/data.R`: `load_data()` and helpers.
 - `data/cache.rds`: offline fallback (the two CSVs, processed).
-- `tools/build_cache_and_profile.R`: rebuilds the cache and the checks.
+- `tools/build_cache_and_profile.R`: downloads the two IRCC files into `raw_profile/` itself, rebuilds the data and reruns these checks (`--local` reuses the files already there).
 - `raw_profile/`: the downloaded CSVs (not for submission), `ckan.json` (catalogue metadata), `profile_output.txt`.
 
 ## 14. Data sources used (updated October 18, 2026)
