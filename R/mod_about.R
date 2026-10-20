@@ -67,7 +67,13 @@ about_ui <- function(id) {
 
 about_server <- function(id, data, meta) {
   shiny::moduleServer(id, function(input, output, session) {
-    output$about <- shiny::renderUI({
+    output$about <- shiny::renderUI(about_content(meta))
+  })
+}
+
+# The About page content (also read, as plain text, by the Help assistant so
+# its answers follow the same explanations; see R/assistant.R).
+about_content <- function(meta) {
       tags <- htmltools::tags
       latest_tx <- fmt_month(meta$latest_month)
       first_tx  <- fmt_month(meta$first_month)
@@ -177,6 +183,4 @@ about_server <- function(id, data, meta) {
           )
         )
       )
-    })
-  })
 }

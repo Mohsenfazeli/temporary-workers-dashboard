@@ -6,6 +6,10 @@ if (length(missing_packages) > 0) {
   install.packages(missing_packages, repos = "https://cloud.r-project.org")
 }
 
+# The test suite never calls the real Gemini API: the key is removed for the
+# tests (and for the apps they start); the assistant is tested with a mock.
+Sys.unsetenv("GEMINI_API_KEY")
+
 # Browser tests: give headless Chrome up to 60 s per command (default 10 s).
 # The first page load waits for the app to read its data, which can take
 # longer than 10 s on a slower computer (seen on a Windows PC: about 18 s).

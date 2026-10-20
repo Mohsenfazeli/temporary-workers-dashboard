@@ -10,13 +10,15 @@
 #   R/calc.R        all calculations (testable, no Shiny code)
 #   R/theme.R       colours, fonts, chart helpers, source lines
 #   R/mod_*.R       one Shiny module per tab
+#   R/assistant.R   Help tab assistant (optional; needs GEMINI_API_KEY)
 # Shiny automatically sources every file in R/ before running this file.
 # =============================================================================
 
 # ---- 0. Packages: install any that are missing, then load them -------------
 required_packages <- c("shiny", "bslib", "bsicons", "plotly", "DT", "dplyr",
                        "tidyr", "readr", "lubridate", "scales",
-                       "shinyWidgets", "shinycssloaders", "htmltools")
+                       "shinyWidgets", "shinycssloaders", "htmltools",
+                       "httr2", "commonmark")   # Help assistant (R/assistant.R)
 missing_packages <- required_packages[
   !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)]
 if (length(missing_packages) > 0) {
@@ -58,6 +60,13 @@ bundle <- if (nzchar(local_dir)) {
 }
 DATA <- bundle$data            # tidy table used by every tab
 META <- bundle$meta            # retrieval time, latest month, source...
+
+# Help assistant: its instructions and context (the dashboard's own text and
+# key figures from these data), built once (R/assistant.R). It works only if
+# the GEMINI_API_KEY environment variable is set; otherwise the Help tab says
+# the assistant is not available and nothing else changes.
+ASSISTANT_CONFIG <- assistant_config()
+ASSISTANT_PROMPT <- if (ASSISTANT_CONFIG$has_key) assistant_system_prompt(DATA, META) else ""
 
 # Slider months, years and latest month all come from the data itself.
 MONTHS        <- month_choices(DATA)
@@ -163,7 +172,8 @@ ui <- bslib::page_navbar(
   bslib::nav_panel("Geography", geography_ui("geography")),
   bslib::nav_panel("Composition", composition_ui("composition")),
   bslib::nav_panel("Data", data_ui("data")),
-  bslib::nav_panel("About the data", about_ui("about"))
+  bslib::nav_panel("About the data", about_ui("about")),
+  bslib::nav_panel("Help", help_ui("help"))
 )
 
 # ---- 3. Server -----------------------------------------------------------------
@@ -206,6 +216,7 @@ server <- function(input, output, session) {
   composition_server("composition", sel, DATA, META, bundle$detail)
   data_server("data", sel, DATA, META)
   about_server("about", DATA, META)
+  help_server("help", sel, ASSISTANT_PROMPT, ASSISTANT_CONFIG)
 }
 
 shiny::shinyApp(ui, server)

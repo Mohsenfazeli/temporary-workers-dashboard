@@ -31,12 +31,20 @@ How the data are handled:
 - Dotted lines on the Trends charts mark six dated policy events, each linked to its official Government of Canada source. They are context only and do not imply cause.
 - "Same months each year" (Annual view) compares January to July of every year with 2026.
 
+## Help assistant (optional)
+The **Help** tab has a small "Ask about this dashboard" assistant. It answers questions about how to use the dashboard, what the terms mean and what the data show, using only the dashboard's own text and a table of key figures computed from the same IRCC data (`R/assistant.R`). Answers are written by Google's Gemini API, called from the server, so the key never reaches the browser.
+- It needs an API key in the environment variable `GEMINI_API_KEY` (free key from Google AI Studio). Without it the Help tab says the assistant is not available and everything else works as usual.
+- Optional settings: `TW_GEMINI_MODEL` (default `gemini-3.5-flash-lite`, which the free tier allows many more questions a day than Flash), `TW_GEMINI_FALLBACK` (default `gemini-3.5-flash`, tried once if the first model is busy or over its limit), `TW_GEMINI_TIMEOUT` (seconds, default 30), `TW_ASSISTANT_SESSION_MAX` (questions per visit, default 20), `TW_ASSISTANT_DAILY_MAX` (questions per day, default 300).
+- Questions are limited to 500 characters. AI answers can be wrong; the charts and About the data are the reference.
+- `tools/deploy.R` uploads the key in a temporary `.Renviron` that is deleted after the upload. Never commit a key: `.Renviron` is in `.gitignore`.
+
 ## Structure
 - `app.R`: page layout, global sidebar controls, header status bar; loads the data once at startup.
 - `R/data.R`: `load_release()` (default: the dated IRCC release) and `load_data()` (live read, checks, tidy table, cache fallback).
 - `R/calc.R`: calculation and formatting functions, all tested.
 - `R/theme.R`: colours (colour-blind safe), chart styling, source lines.
-- `R/mod_*.R`: one module per tab (Overview, Trends, Geography, Composition, Data, About).
+- `R/mod_*.R`: one module per tab (Overview, Trends, Geography, Composition, Data, About, Help).
+- `R/assistant.R`: the Help assistant (context, limits, Gemini call, fallbacks).
 - `www/styles.css`: government-style visual tweaks.
 - `data/cache.rds`: offline fallback (IRCC data as downloaded on October 16, 2026; replaced on the server only by a download that passes every check).
 - `data/baseline.rds`: the IRCC release of September 15, 2026 that the app shows by default (date in `RELEASE_INFO`, `R/data.R`); never overwritten. Each new download is compared with it for settled months (at least 12 months before its latest month); if more than 2% of cells or any full-year Canada program total (more than 1%) differ, the download is treated as damaged. Refresh it with `tools/build_cache_and_profile.R` when you redeploy with a newer verified release, and update `RELEASE_INFO` to IRCC's date for that release.
