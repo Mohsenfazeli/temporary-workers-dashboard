@@ -8,10 +8,14 @@ An interactive dashboard of temporary work permits by province/territory and pro
 ![Trends tab](docs/trends.png)
 
 ## Run it locally
-1. Install R (4.3 or newer; built with 4.5.0) from https://cloud.r-project.org. RStudio is optional.
-2. Clone or download this repository and open R in its folder (in RStudio: open the folder, or `setwd()` to it).
-3. Start the app: `shiny::runApp()` (if the shiny package isn't installed yet, run `install.packages("shiny")` first). A browser tab opens. On first run every script installs any missing packages itself from CRAN as ready-made binaries, so no compiler (e.g. Rtools on Windows) is needed.
-4. Optional, only if you want the exact package versions used to build it: `install.packages("renv"); renv::restore()`. This can take much longer, and on Windows it may need Rtools if an exact version is only available as source code.
+This repository holds the app code, the processed data and the package list. Internet is needed only once, to install R packages.
+
+1. Install R from https://cloud.r-project.org (R 4.5 or newer recommended; built and tested with R 4.5.0). RStudio is optional.
+2. Clone or download this repository. Set R's working folder to it (RStudio: *Session > Set Working Directory > Choose Directory…*, or `setwd("C:/path/to/temporary-workers-dashboard")`); `getwd()` should show it.
+3. **Quick run (recommended)**, in the R console: `install.packages("shiny")`, then `shiny::runApp()`. The first run installs about 90 R packages (ready-made versions from CRAN, so usually no extra tools are needed) and can take several minutes; then the dashboard opens in your browser.
+4. **Exact versions (optional)**: `install.packages("renv")`, `renv::restore()`, then `shiny::runApp()` (slower; on Windows a package may need Rtools).
+
+The **Help** tab (optional AI assistant) needs a `GEMINI_API_KEY`, which is not included; without it, everything else works as usual (see *Help assistant* below).
 
 By default the app shows a fixed IRCC release: the two IRCC files as published on September 15, 2026 (January 2015 to July 2026), saved in `data/baseline.rds`. The header says "Data: IRCC open data release of September 15, 2026 (data to July 2026)". The date is IRCC's own: the files' Last-Modified date on the IRCC server and the "date modified" in the Open Government catalogue, both checked on October 18, 2026. Every visitor sees the same numbers, so the figures match the written notes.
 
@@ -52,14 +56,15 @@ The **Help** tab has a small "Ask about this dashboard" assistant. It answers qu
 - `tests/`: testthat and shinytest2 tests.
 - `tools/get_testdata.R`: downloads the two IRCC CSV files into `testdata/` for the tests.
 - `tools/build_cache_and_profile.R`: rebuilds `data/cache.rds` from local copies of the IRCC files in `raw_profile/` (not included; download them first).
-- `tools/deploy.R`: publishes to shinyapps.io using the `SHINYAPPS_ACCOUNT`, `SHINYAPPS_TOKEN` and `SHINYAPPS_SECRET` environment variables.
+- `tools/deploy.R`: publishes to shinyapps.io using the `SHINYAPPS_ACCOUNT`, `SHINYAPPS_TOKEN` and `SHINYAPPS_SECRET` environment variables, or an account already set up on the computer (no secrets stored).
 - `renv.lock`: exact package versions.
 
 ## Tests
 ```
 Rscript tools/get_testdata.R          # one-off: local copies of the IRCC files
-NOT_CRAN=true Rscript tests/testthat.R
+Rscript tests/testthat.R               # sets NOT_CRAN itself
 ```
+In the R console instead: `source("tools/get_testdata.R")`, then `system2(file.path(R.home("bin"), "Rscript"), "tests/testthat.R")`. The tests need internet.
 - The browser tests need Google Chrome or Chromium.
 - The live test reads IRCC directly and skips with a message if IRCC can't be reached.
 - The performance tests time the app starting from the saved copy (`data/cache.rds`; target under 10 s) and filter changes (median under 1 s, none over 2 s). A live start also downloads about 17 MB from IRCC, so it takes longer on a slow connection.
