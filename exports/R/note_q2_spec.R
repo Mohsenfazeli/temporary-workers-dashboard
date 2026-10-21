@@ -52,8 +52,26 @@ q2_write_inputs <- function(bundle, out_dir, figures_dir, build_date = Sys.Date(
   A[at("**Part-year:**")] <- if (P$M < 12)
     sprintf("**Part-year:** %d covers January to %s and is only compared with January to %s of earlier years.", Y, P$month, P$month) else
       sprintf("**Part-year:** none; %d is a full calendar year.", Y)
+  rng <- function(r) paste(r[1], "to", r[2])
+  # Figure filters (named here, not under the figures) and their periods
+  fig_filters <- sprintf(paste0("Figure 1 (Overview tab): Canada, both programs, Annual view, %s%s; ",
+                                "Figure 2 (Geography tab): British Columbia (highlighted), both programs, period ending %s."),
+                         if (R$same) sprintf("show only Jan\u2013%s of each year, ", P$mon) else "", rng(R$full), fmt_month(P$latest))
   i <- at("**Figures**")
-  A[i] <- q2_replace_once(A[i], "(plain-language version, October 19, 2026)", sprintf("(plain-language version, %s)", bdate))
+  # The figures are captured when this file is built: that date is named as such, so it is not read as the note's date.
+  A[i] <- q2_replace_once(A[i], "(plain-language version, October 19, 2026)",
+                          sprintf("(plain-language version; figures captured on %s, when this file was built)", bdate))
+  A[i] <- q2_replace_once(A[i], O$fig_filters[[1]], fig_filters)
+  A[i] <- q2_replace_once(A[i], "Figure 1's axis labels each bar \"(Jan\u2013Jul)\", as the dashboard does when only January\u2013July is shown.",
+                          if (R$same) sprintf("Figure 1's axis labels each bar \"(Jan\u2013%s)\", as the dashboard does when only %s is shown.", P$mon, YL()) else "")
+  A[i] <- sub(" +$", "", A[i])
+  A[at("**One time frame:**")] <- sprintf(paste0("**One time frame:** the body compares %s with %s of earlier years (and full calendar ",
+                                                 "years up to %d); \"highest %s in the data\" means above %s of every year from %d to %d."),
+                                          YL(Y), YL(), LF, YL(), YL(), FY0, PY)
+  bcv <- v("bc_ytd_change")
+  A[at("**Percentages**")] <- sprintf(paste0("**Percentages** are recalculated from the raw counts and rounded once, from the exact value ",
+                                             "(B.C.'s %s%.2f%% is shown as %s); the appendix tables and Appendix D show them to one decimal."),
+                                      if (bcv >= 0) "+" else "\u2212", abs(100 * bcv), q2_round(bcv, "pct0"))
   if (!fl$context_release) { i <- at("**Streams**")
     A[i] <- q2_replace_once(A[i], "; in this release it is entirely IRCC's \"Unknown\" program, as its other codes are suppressed cells counted as 0.", ".") }
   A[at("**Robustness check:**")] <- sprintf(paste0(
@@ -61,20 +79,19 @@ q2_write_inputs <- function(bundle, out_dir, figures_dir, build_date = Sys.Date(
     "provinces and territories), B.C. supplied {bc_contrib_ytd_pt} of the %s %s, against its ",
     "{bc_share_ytd%s_pt} share of permits a year earlier ({bc_contrib_ytd} and {bc_share_ytd%s} with them included), so ",
     "the finding on B.C.'s share %s on that group."), YL(Y), fl$inc_word, yy(PY), yy(PY), if (fl$pt_same) "does not depend" else "depends")
-  i <- at("**12-month totals**")
-  A[i] <- q2_replace_once(A[i], "(April 2023 to March 2024)", sprintf("(%s)", pk_long))
-  A[i] <- q2_replace_once(A[i], "Overview cards show January–July 2026.", sprintf("Overview cards show %s.", YL(Y)))
   if (!(fl$statcan && fl$rebound)) { i <- at("**Permits vs. people:**")
     A[i] <- q2_replace_once(A[i], " in opposite directions, as they do in 2025–2026.", " in opposite directions.") }
   i <- at("**Unknown IMP check:**")
   A[i] <- q2_replace_once(A[i], "would have fallen in 2026; it rose",
                           sprintf("would have fallen in %d; it %s", Y, if (fl$unk_up) "rose" else "fell, so part of the PGWP change may be re-labelling"))
   i <- at("**Policy events**")
-  A[i] <- q2_replace_once(A[i], " The cohort explanation for the 2026 PGWP rise is labelled as untested.",
-                          if (fl$pgwp_up) sprintf(" The cohort explanation for the %d PGWP rise is labelled as untested.", Y) else "")
+  A[i] <- q2_replace_once(A[i], paste0(" The cohort explanation for the 2026 PGWP rise is labelled as untested, and the explanation for ",
+                                       "permits rising while people fall (new PGWPs go to graduates already in Canada [11]) as likely."),
+                          if (!fl$pgwp_up) "" else paste0(sprintf(" The cohort explanation for the %d PGWP rise is labelled as untested", Y),
+                            if (fl$statcan && fl$rebound) paste0(", and the explanation for permits rising while people fall (new PGWPs go to ",
+                                                                 "graduates already in Canada [11]) as likely.") else "."))
 
   # Appendix C captions
-  rng <- function(r) paste(r[1], "to", r[2])
   cap <- list(
     list(q2_fig_files[["c1"]], "Figure C1", sprintf("Full calendar years. Dashboard Overview tab; filters: Canada, both programs, Annual view, full period%s.",
                                                     if (R$same) sprintf(" (lighter bar: %d, %s only)", Y, YL()) else "")),
@@ -95,14 +112,11 @@ q2_write_inputs <- function(bundle, out_dir, figures_dir, build_date = Sys.Date(
                                                     YL(PY), rng(R$ytd_prev))))
   widths <- vapply(O$appendix_c, function(x) as.numeric(x[[4]]), numeric(1))
   appendix_c <- lapply(seq_along(cap), function(k) list(cap[[k]][[1]], cap[[k]][[2]], cap[[k]][[3]], widths[k]))
-  fig <- list(`1` = list(q2_fig_files[["f1"]], as.numeric(O$fig$`1`[[2]]),
-                         sprintf("Dashboard Overview tab; filters: Canada, both programs, Annual view, %s%s.",
-                                 if (R$same) sprintf("show only Jan\u2013%s of each year, ", P$mon) else "", rng(R$full))),
-              `2` = list(q2_fig_files[["f2"]], as.numeric(O$fig$`2`[[2]]),
-                         sprintf("Dashboard Geography tab; filters: British Columbia (highlighted), both programs, period ending %s.", fmt_month(P$latest))))
+  fig <- list(`1` = list(q2_fig_files[["f1"]], as.numeric(O$fig$`1`[[2]]), O$fig$`1`[[3]]),     # caption note: the tab (filters in Appendix A)
+              `2` = list(q2_fig_files[["f2"]], as.numeric(O$fig$`2`[[2]]), O$fig$`2`[[3]]))
   E <- unlist(O$appendix_e)
   E[1] <- q2_replace_once(E[1], "IRCC open data release of September 15, 2026 (data to July 2026)", phrase)
-  E[2] <- q2_replace_once(E[2], "(commit 3c6cae6)", sprintf("(version of %s)", bdate))
+  E[2] <- q2_replace_once(E[2], "(commit 7d2fad4)", sprintf("(the version of %s, when this file was built)", bdate))
 
   # References: the release, retrieval date and dashboard title follow the data
   refs <- utils::read.csv(file.path(exports_dir, "q2", "references_template.csv"), stringsAsFactors = FALSE,

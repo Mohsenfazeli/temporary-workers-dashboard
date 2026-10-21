@@ -153,6 +153,12 @@ q2_facts <- function(bundle) {
   dif("bc_pgwp_ytd_increase", ytd("bc_pgwp")[2], ytd("bc_pgwp")[1])
   dif("bc_other_ytd_change", "bc_ytd_increase", "bc_pgwp_ytd_increase")
   dif("ca_other_ytd_change", "ca_ytd_increase", "pgwp_ytd_increase")
+  # Table 1 (Oct 21, 2026): permits other than PGWPs in each period, and their change
+  for (k in c("bc", "ca")) {
+    pg <- if (k == "bc") "bc_pgwp" else "pgwp"
+    for (j in 1:2) dif(ytd(paste0(k, "_other"))[j], ytd(k)[j], ytd(pg)[j])
+    pct(paste0(k, "_other_ytd_pct"), ytd(paste0(k, "_other"))[2], ytd(paste0(k, "_other"))[1])
+  }
   for (y in c(PY, Y)) cnt_t(paste0("bc_lmia_ytd", yy(y)), y, geo = "British Columbia", progs = "TFWP", cats = Q2_LMIA)
   pct("bc_lmia_ytd_change", ytd("bc_lmia")[2], ytd("bc_lmia")[1])
   for (y in c(PY, Y)) cnt_t(paste0("bc_agri_ytd", yy(y)), y, geo = "British Columbia", progs = "TFWP", cats = Q2_AGRI)

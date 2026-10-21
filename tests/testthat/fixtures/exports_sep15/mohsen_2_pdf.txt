@@ -1,83 +1,86 @@
 Data Insight – October 19, 2026
-Mohsen Fazeli · October 19, 2026
+Mohsen Fazeli · October 19, 2026 · IRCC data to July 2026
 
 Summary
+Work permits are rebounding, led by graduates, while employer-sponsored permits fall faster in B.C. than nationally.
+B.C.’s growth now rests on graduates, whose routes to permanent residence have narrowed [10]; how many stay is the
+key planning question.
+   Permits are rebounding, but the temporary population is not. Permits rose 46% in January–July 2026 from the
+    same months of 2025, the highest January–July in the data, yet Statistics Canada estimates temporary residents fell
+    [12].
+   Graduates drive the rebound. Post-graduation work permits (PGWPs) supplied 85% of the national increase.
+   B.C.’s share of the rebound is small. B.C. held 18% of Canada’s permits a year earlier but supplied 12% of the
+    increase.
+   Employer-sponsored permits are falling faster in B.C. Temporary Foreign Worker Program (TFWP) permits fell 15%
+    in B.C. over the same months, against 5% nationally.
+Background
 This note uses Immigration, Refugees and Citizenship Canada (IRCC) work permit data [1, 2], analysed in the
 accompanying dashboard [13], to inform B.C. labour market and skills planning, including the B.C. Labour Market
-Outlook [3].
-  • Permits are rebounding, but the temporary population is not. Permits rose 46% in January–July 2026 from a year
-     earlier and, over 12 months, are back to 95% of their peak, yet Statistics Canada estimates temporary residents fell
-     [12].
-  • Graduates drive the rebound. Post-graduation work permits (PGWPs) supplied 85% of the increase.
-  • Employer-sponsored permits are falling faster in B.C. Temporary Foreign Worker Program (TFWP) permits fell
-     15% in B.C. over the same months, against 5% nationally.
-  • B.C.’s share of the rebound is small. It supplied 12% of the increase, though it held 18% of permits a year earlier.
-For B.C.: growth now rests on graduates, whose routes to permanent residence have narrowed [10]. How many stay is
-the key planning question.
-Background
-The TFWP lets employers hire foreign workers, usually after a Labour Market Impact Assessment (LMIA) shows no
-Canadian is available; this note calls these permits employer-sponsored. The International Mobility Program (IMP)
-needs no LMIA; it covers PGWPs for graduates of Canadian institutions [11], spouses and youth exchanges.
-The data, from IRCC’s open data release of September 15, 2026, count permits that took effect each month, by
+Outlook [3]. The data, from IRCC’s open data release of September 15, 2026, count permits issued each month, by
 intended province, from January 2015 to July 2026 [1, 2]. January–July 2026 is compared with the same months of
-2025. Figures are rounded; exact values are in Appendix D.
+2025. Policy events are context: the data show timing, not cause. Figures are rounded; exact values are in Appendix D.
+The TFWP lets employers hire foreign workers, usually after a Labour Market Impact Assessment (LMIA) shows no
+Canadian is available; this note calls these permits employer-sponsored, split into farm permits (agricultural streams)
+and non-farm permits (IRCC’s “other workers with an LMIA”). The International Mobility Program (IMP) needs no LMIA;
+it covers PGWPs for graduates of Canadian institutions [11], spouses and youth exchanges.
 Findings
 Permits more than tripled, fell, and are climbing again
 Permits rose from 265,000 in 2015 to 970,000 in 2023, dipping only in 2020, when COVID-19 travel restrictions took
-effect [4]. Over 12-month periods, they peaked at 1.02 million in the year to March 2024, then fell to 755,000 in 2025.
-The decline followed a federal target to lower temporary residents’ share of the population [5] and tighter study
-permit, PGWP and TFWP rules [6–8], although the data show timing, not cause.
-In January–July 2026, 673,000 permits took effect, 46% more than a year earlier and above the 2024 high for these
-months (Figure 1). Yet permits are not people: Statistics Canada estimates that non-permanent residents fell by
-155,000 in the year to July 1, 2026, led by study permit holders [12].
+effect [4]. They fell to 755,000 in 2025, after a federal target to lower temporary residents’ share of the population [5]
+and tighter study permit, PGWP and TFWP rules [6–8].
+In January–July 2026, 673,000 permits were issued, 46% more than in the same months of 2025 and the highest
+January–July in the data (Figure 1). Yet permits are not people: Statistics Canada estimates that non-permanent
+residents fell by 155,000 in the year to July 1, 2026, led by study permit holders [12]. Permits can rise while people fall,
+likely because new PGWPs go to graduates of Canadian institutions [11], who were already in Canada as students.
 
 
 
 
-Figure 1. Permits that took effect, January–July of each year, Canada. Dashboard Overview tab; filters: Canada, both programs,
-Annual view, show only Jan–Jul of each year, Jan 2015 to Jul 2026.
+Figure 1. January–July 2026 has the most permits of any January–July in the data. Dashboard Overview tab.
 Graduates lift permits; employer-sponsored permits fall
-In January–July, PGWPs rose from 86,000 to 266,000, supplying 180,000 of the 212,000 additional permits (Figure C3).
-The cause is untested; larger student cohorts admitted before the 2024 study permit cap [6] may now be graduating.
-The rise is real, not a recoding: permits with no identified program (“Unknown IMP”) also rose, by 26,000.
+In January–July, PGWPs rose from 86,000 to 266,000. They supplied 180,000 of the 212,000 additional permits. The
+cause is untested; larger student cohorts admitted before the 2024 study permit cap [6] may now be graduating.
+Employer-sponsored permits moved the other way. Nationally, non-farm permits more than tripled from 2021 to 2024,
+after low-wage caps were raised in 2022 [9]. They then fell 21% from 2024 to 2025 and another 15% in January–July
+2026 from a year earlier, after the 2024 low-wage limits [7].
+
+
+                                                                                        Mohsen Fazeli · Work permit insights for B.C. · page 1
+B.C.’s share of the rebound shrinks
+B.C. held 18% of Canada’s permits in January–July 2025 but supplied 12% of the increase to 2026. Ontario supplied 53%
+(Figure 2). Graduates account for more than all of B.C.’s growth; other permits fell (Table 1).
+Table 1. B.C. grew only through graduates; its other permits fell, while Canada’s rose.
+    Permits issued, January–July                B.C. 2025       B.C. 2026      B.C. change   Canada 2025       Canada 2026         Canada change
+    All permits                                 84,000          110,000        +30%          462,000           673,000             +46%
+    PGWPs                                       15,000          43,000         +176%         86,000            266,000             +208%
+    All other permits (all minus PGWPs)         69,000          67,000         −2%           375,000           407,000             +8%
+    of which employer-sponsored (TFWP)          24,000          21,000         −15%          119,000           113,000             −5%
 
 
 
 
-                                                                                     Mohsen Fazeli · Work permit insights for B.C. · page 1
-Employer-sponsored permits moved the other way. Non-agricultural LMIA permits more than tripled from 2021 to
-2024, after low-wage caps were raised in 2022 [9]. They then fell 21% in 2025 and another 15% in January–July 2026,
-after the 2024 low-wage limits [7].
-B.C.’s share of the rebound shrinks
-B.C. supplied 12% of the national increase, below its 18% share of permits a year earlier (Figure C8); Ontario supplied
-53% (Figure 2). Two things explain the gap. B.C.’s PGWPs grew more slowly than Canada’s (176% against 208%), and its
-other permits fell by 1,500 while Canada’s rose by 32,000. All of B.C.’s growth therefore came from graduates.
-
-
-
-
-Figure 2. Share of Canada’s January–July 2026 increase, by province and territory. Dashboard Geography tab; filters: British
-Columbia (highlighted), both programs, period ending July 2026.
-Employer-sponsored permits are also falling faster in B.C. In January–July, TFWP permits fell 15% in B.C. and 21% in
-Alberta, but were almost unchanged in Ontario (Figure C5). B.C.’s decline is in non-agricultural LMIA permits (down
-32%); agricultural permits held steady (Figure C6). The TFWP is 27% of B.C.’s permits against 22% nationally (2025), so
-this decline weighs more on B.C.
+Figure 2. Ontario supplied most of Canada’s January–July 2026 increase; B.C. less than its share. Dashboard Geography tab.
+Employer-sponsored permits are also falling faster in B.C. In January–July, TFWP permits fell 15% in B.C., against 5% in
+Canada (Table 1). They fell 21% in Alberta but were almost unchanged in Ontario. B.C.’s decline is in non-farm permits
+(down 32%); farm permits held steady. The TFWP was 27% of B.C.’s 2025 permits, against 22% nationally, so this
+decline weighs more on B.C.
 Implications and next steps for B.C.
-    Track temporary labour supply monthly. The Outlook expects temporary residents to flow out of B.C. over 2025–
-     2035 [3]; the falling temporary population fits this, despite rising permits. Reading monthly IRCC permits with
-     Statistics Canada population estimates would show early if supply strays from that path.
-    Find out how many graduates stay. The study permit cap may shrink future graduating classes, and routes to
-     permanent residence have narrowed: the 2025 BC Provincial Nominee Program allocation was cut and its
-     international post-graduate stream closed [10]. An IRCC data request for PGWPs by B.C. economic region and
-     institution would show how many graduates stay, and where, helping test whether their skills match high-
-     opportunity occupations.
-    Identify sectors losing employer-sponsored workers. IRCC’s TFWP tables by occupation would show which B.C.
-     occupations account for the 32% fall in non-agricultural LMIA permits.
+      Find out how many graduates stay. Graduates account for more than all of B.C.’s growth in 2026 (Table 1). The
+       study permit cap may shrink future graduating classes, and routes to permanent residence have narrowed: the
+       2025 BC Provincial Nominee Program allocation was cut and its international post-graduate stream closed [10]. An
+       IRCC data request for PGWPs by B.C. economic region and institution would show how many graduates stay, and
+       where, helping test whether their skills match high-opportunity occupations.
+      Identify sectors losing employer-sponsored workers. IRCC’s TFWP tables by occupation would show which B.C.
+       occupations account for the 32% fall in non-farm permits.
+      Track temporary labour supply monthly. The Outlook expects temporary residents to flow out of B.C. over 2025–
+       2035 [3]; the falling temporary population [12] fits this. Reading monthly IRCC permits with Statistics Canada
+       population estimates would show early if supply strays from that path.
 Data notes
 A person can hold several permits, and a permit does not show employment. IRCC suppresses values of 0–5 (“--”,
-counted here as 0) and rounds others to the nearest 5; data are preliminary [1, 2]. “Unknown IMP” made up 20% of
-permits in 2023, 14% in January–July 2026 and 49% of Alberta’s 2026 increase, so stream comparisons are
-approximate, especially for Alberta.
+counted here as 0) and rounds others to the nearest 5; data are preliminary [1, 2]. Permits with no identified program
+(“Unknown IMP”) made up 20% of permits in 2023 and 14% in January–July 2026. They supplied 49% of Alberta’s 2026
+increase, so stream comparisons are approximate, especially for Alberta. The PGWP rise is not a recoding out of
+Unknown IMP, which also rose, by 26,000.
 References
 [1] IRCC, TFWP work permit holders, release of September 15, 2026.
 [2] IRCC, IMP work permit holders, release of September 15, 2026.
@@ -94,7 +97,8 @@ References
 [13] M. Fazeli, Temporary Workers in Canada dashboard, October 2026.
 
 
-                                                                                        Mohsen Fazeli · Work permit insights for B.C. · page 2
+
+                                                                                                 Mohsen Fazeli · Work permit insights for B.C. · page 2
 APPENDICES (supporting detail; not part of the two-page note)
 Appendix A. Method and assumptions
  Data: only the two IRCC CSV files [1, 2], in the IRCC open data release of September 15, 2026 (data to July 2026)
@@ -102,11 +106,10 @@ Appendix A. Method and assumptions
    release, so every IRCC number matches the dashboard. Latest month: July 2026. Background sources are cited for
    context only; the one outside number is Statistics Canada's estimate of the fall in non-permanent residents [12], a
    count of people, not permits.
- Measure: a flow. Each value counts work permits that took effect in a month (IRCC's wording is "became effective":
-   the month the permit was signed and given to the person), by intended province or territory. The dashboard calls
-   the same counts "work permits issued"; the two terms mean the same thing here. New permits, renewals and
-   changes of status all count. Annual figures are sums of months, labelled "permits", not people, and are not the
-   number of workers present on a date.
+ Measure: a flow. Each value counts work permits issued in a month, as the dashboard calls them (IRCC's wording is
+   "became effective": the month the permit was signed and given to the person), by intended province or territory.
+   New permits, renewals and changes of status all count. Annual figures are sums of months, labelled "permits", not
+   people, and are not the number of workers present on a date.
  Part-year: 2026 covers January to July and is only compared with January to July of earlier years.
  Rounding in the note: the body rounds counts to the nearest thousand (or to two decimals of a million) and
    percentages to whole numbers. Appendix D lists every rounded number with its exact value and where to find it.
@@ -119,22 +122,23 @@ Appendix A. Method and assumptions
    permit holders: it leaves out people in Canada mainly for other reasons, such as asylum claimants.
  Figures are pictures of the Temporary Workers dashboard's own charts [13] (plain-language version, October 19,
    2026), with its card titles and source lines, taken from the dashboard in its default setting (the release above). The
-   caption under each names the tab and filters. Some numbers have no chart in the dashboard (the 12-month peak
-   and the latest 12-month total as a share of it, Unknown IMP as a share of all permits and of Alberta's increase, the
-   change in permits other than PGWPs, and the robustness check below); they are calculated from the same two
-   IRCC files (Appendix D).
+   caption under each states its takeaway and names the tab; the filters are: Figure 1 (Overview tab): Canada, both
+   programs, Annual view, show only Jan–Jul of each year, Jan 2015 to Jul 2026; Figure 2 (Geography tab): British
+   Columbia (highlighted), both programs, period ending July 2026. Some numbers have no chart in the dashboard
+   (Unknown IMP as a share of all permits and of Alberta's increase, permits other than PGWPs in Table 1, and the
+   robustness check below); they are calculated from the same two IRCC files (Appendix D). Figure 1's axis labels each
+   bar "(Jan–Jul)", as the dashboard does when only January–July is shown.
  Streams are grouped from IRCC's program levels as in the dashboard (mapping in the dashboard's About the data
-   tab; IRCC's own program names per group are on the Composition tab). "Non-agricultural LMIA permits" = IRCC's
-   "Other Temporary Foreign Workers with LMIA" (dashboard: "Other TFWP workers with an LMIA"). "Agricultural
+   tab; IRCC's own program names per group are on the Composition tab). "Non-farm (employer-sponsored) permits"
+   = IRCC's "Other Temporary Foreign Workers with LMIA" (dashboard: "Other TFWP workers with an LMIA"). "Farm
    permits" = the Seasonal Agricultural Worker Program plus other agricultural workers. "Unknown IMP" (IRCC does
    not identify the program; dashboard: "Unknown or other IMP") is kept separate; in this release it is entirely IRCC's
    "Unknown" program, as its other codes are suppressed cells counted as 0.
  Robustness check: leaving permits with no province or territory stated out of Canada (so Canada = the 13
    provinces and territories), B.C. supplied 12.2% of the January–July 2026 increase, against its 19.5% share of permits
    a year earlier (12.1% and 18.2% with them included), so the finding on B.C.'s share does not depend on that group.
- 12-month totals (each month plus the 11 before it) remove the seasonal pattern; the peak is the highest of them
-   (April 2023 to March 2024). They are calculated from the IRCC files; the dashboard's Overview cards show January–
-   July 2026.
+ One time frame: the body compares January–July 2026 with January–July of earlier years (and full calendar years
+   up to 2025); "highest January–July in the data" means above January–July of every year from 2015 to 2025.
  Share of the increase = a province's change in permits divided by Canada's change over the same months, as in the
    dashboard's chart of each province's share of Canada's change (Figure 2).
  Permits vs. people: permit counts are a flow and are never used as a count of temporary workers in Canada.
@@ -143,12 +147,12 @@ Appendix A. Method and assumptions
  Unknown IMP check: if PGWPs had only moved out of "Unknown IMP", that group would have fallen in 2026; it
    rose (checked in analysis_q2.R). Identified streams are still a lower bound for each stream, because some Unknown
    IMP permits may belong to any stream.
- Percentages are recalculated from the raw counts; the appendix tables and Appendix D show them to one decimal.
- Policy events are dated context from official sources. The data show timing, not cause. The cohort explanation for
-   the 2026 PGWP rise is labelled as untested.
+ Percentages are recalculated from the raw counts and rounded once, from the exact value (B.C.'s +30.46% is
+   shown as 30%); the appendix tables and Appendix D show them to one decimal.
+ Policy events are dated context from official sources (Appendix B). The cohort explanation for the 2026 PGWP rise
+   is labelled as untested, and the explanation for permits rising while people fall (new PGWPs go to graduates
+   already in Canada [11]) as likely.
  Reader: a ministry manager or executive who is not a data specialist; jargon is defined on first use.
-
-
 
 
                                                                                Mohsen Fazeli · Work permit insights for B.C. · page 3
@@ -262,88 +266,112 @@ or Alberta)
 Appendix D. Exact values behind the rounded numbers
 Every number in the note's body is rounded. This table gives, for each, the exact value from the two IRCC files (facts_q2.csv, made by analysis_q2.R)
 and where it can be found in the dashboard, or "calculated from the IRCC files" when the dashboard has no chart for it. Percentage changes are
-signed here; the body describes the direction in words. validate_q2.R checks that each rounded number equals its exact value rounded.
-  Statement in the note                                  Shown          Exact value            Where to find it
-  Heading: permits more than tripled, 2015 to 2023       more than      +266.0% (×3.66)        Figure C1 (Overview chart; 264,980 in 2015 and 969,765 in
-                                                         tripled                               2023)
-  Summary: permits rose 46%, Jan–Jul 2026 vs Jan–        46%            +45.8%                 Overview card 2 (Figure C2): +45.8%
+signed here; the body describes the direction in words (Table 1 shows it with a sign). validate_q2.R checks that each rounded number equals its
+exact value rounded.
+  Statement in the note                                  Shown        Exact value             Where to find it
+  Heading: permits more than tripled, 2015 to 2023       more than    +266.0% (×3.66)         Figure C1 (Overview chart; 264,980 in 2015 and 969,765 in
+                                                         tripled                              2023)
+  Summary: permits rose 46%, Jan–Jul 2026 vs Jan–        46%          +45.8%                  Overview card 2 (Figure C2): +45.8%
   Jul 2025
-  Summary: latest 12-month total as a share of the       95%            95.1%                  Calculated from the IRCC files: 966,435 (Aug 2025–Jul
-  12-month peak                                                                                2026) / 1,015,810 (Apr 2023–Mar 2024)
-  Summary: PGWPs' share of the Jan–Jul 2026              85%            85.0%                  Overview What the data show panel: 179,755 of 211,520
-  increase                                                                                     (85.0%)
-  Summary: TFWP permits, B.C., Jan–Jul 2026 vs 2025      15%            −14.5%                 Figure C5 (Geography comparison, TFWP only, B.C.):
-                                                                                               24,360 to 20,825
-  Summary: TFWP permits, Canada, Jan–Jul 2026 vs         5%             −4.8%                  Trends tab, change from a year earlier: TFWP down 4.8%
-  2025                                                                                         (118,515 to 112,790)
-  Summary: B.C. share of Canada's Jan–Jul 2026           12%            12.1%                  Figure 2: 12.1% (25,640 of 211,520)
+  Summary: Jan–Jul 2026 is the highest January–July      (in words)   593,670                 Figure 1; calculated from the IRCC files
+  in the data
+  Summary: PGWPs' share of the Jan–Jul 2026              85%          85.0%                   Overview What the data show panel: 179,755 of 211,520
+  increase                                                                                    (85.0%)
+  Summary: B.C. share of Canada's permits, Jan–Jul       18%          18.2%                   Figure C8 (Share column): 18.2% (84,165 of 461,760)
+  2025
+  Summary: B.C. share of Canada's Jan–Jul 2026           12%          12.1%                   Figure 2: 12.1% (25,640 of 211,520)
   increase
-  Summary: B.C. share of Canada's permits, Jan–Jul       18%            18.2%                  Figure C8 (Share column): 18.2% (84,165 of 461,760)
-  2025
-  Permits, Canada, 2015                                  265,000        264,980                Figure C1 (Overview chart)
-  Permits, Canada, 2023                                  970,000        969,765                Figure C1 (Overview chart)
-  Permits fell only in 2020 (430,145 in 2019 to          (in words)     338,740                Figure C1 (Overview chart)
+  Summary: TFWP permits, B.C., Jan–Jul 2026 vs 2025      15%          −14.5%                  Figure C5 (Geography comparison, TFWP only, B.C.):
+                                                                                              24,360 to 20,825
+  Summary: TFWP permits, Canada, Jan–Jul 2026 vs         5%           −4.8%                   Trends tab, change from a year earlier: TFWP down 4.8%
+  2025                                                                                        (118,515 to 112,790)
+  Permits, Canada, 2015                                  265,000      264,980                 Figure C1 (Overview chart)
+  Permits, Canada, 2023                                  970,000      969,765                 Figure C1 (Overview chart)
+  Permits fell only in 2020 (430,145 in 2019 to          (in words)   338,740                 Figure C1 (Overview chart)
   338,740)
-  Highest 12-month total (April 2023 to March 2024),     1.02 million   1,015,810              Calculated from the IRCC files
-  Canada
-  Permits, Canada, 2025                                  755,000        754,915                Figure C1 (Overview chart)
-  Permits, Canada, Jan–Jul 2026                          673,000        673,280                Overview card 1 (Figure C2): 673,280
-  Permits, Canada, Jan–Jul 2026 vs Jan–Jul 2025          46%            +45.8%                 Overview card 2 (Figure C2): +45.8%
-  Jan–Jul 2026 above the previous high for these         (in words)     593,670                Figure 1
-  months (Jan–Jul 2024: 593,670)
-  Statistics Canada: non-permanent residents, July 1,    155,000        −154,614 (Statistics   Statistics Canada, The Daily, September 23, 2026 [12]:
-  2025 to July 1, 2026                                                  Canada)                −154,614 (to 2,779,774); not IRCC data
-  PGWPs, Canada, Jan–Jul 2025                            86,000         86,295                 Figure C3 (Composition tab; hover on the 2025 bar)
-  PGWPs, Canada, Jan–Jul 2026                            266,000        266,050                Figure C3 (Composition tab; hover on the 2026 bar)
-  PGWP increase, Canada, Jan–Jul 2025 to 2026            180,000        +179,755               Calculated from Figure C3 values (266,050 − 86,295)
-  Total increase, Canada, Jan–Jul 2025 to 2026           212,000        +211,520               Overview card 2 (673,280 − 461,760)
-  Unknown IMP increase, Canada, Jan–Jul 2025 to          26,000         +26,185                Figure C3 (Unknown or other IMP; 70,785 to 96,970)
+  Permits, Canada, 2025                                  755,000      754,915                 Figure C1 (Overview chart)
+  Permits, Canada, Jan–Jul 2026                          673,000      673,280                 Overview card 1 (Figure C2): 673,280
+  Permits, Canada, Jan–Jul 2026 vs Jan–Jul 2025          46%          +45.8%                  Overview card 2 (Figure C2): +45.8%
+  Jan–Jul 2026 is the highest January–July in the data   (in words)   593,670                 Figure 1 (tallest bar); calculated from the IRCC files
+  (previous high Jan–Jul 2024: 593,670)
+  Statistics Canada: non-permanent residents, July 1,    155,000      −154,614 (Statistics    Statistics Canada, The Daily, September 23, 2026 [12]:
+  2025 to July 1, 2026                                                Canada)                 −154,614 (to 2,779,774); not IRCC data
+  PGWPs, Canada, Jan–Jul 2025                            86,000       86,295                  Figure C3 (Composition tab; hover on the 2025 bar)
+  PGWPs, Canada, Jan–Jul 2026                            266,000      266,050                 Figure C3 (Composition tab; hover on the 2026 bar)
+  PGWP increase, Canada, Jan–Jul 2025 to 2026            180,000      +179,755                Calculated from Figure C3 values (266,050 − 86,295)
+  Total increase, Canada, Jan–Jul 2025 to 2026           212,000      +211,520                Overview card 2 (673,280 − 461,760)
+  Non-farm employer-sponsored permits (IRCC: other       more than    +212.9% (×3.13)         Composition tab (TFWP chart; Other TFWP workers with
+  workers with an LMIA), Canada, 2021 to 2024            tripled                              an LMIA)
+  Non-farm employer-sponsored permits, Canada,           21%          −21.0%                  Composition tab (TFWP chart; Other TFWP workers with
+  2024 to 2025                                                                                an LMIA)
+  Non-farm employer-sponsored permits, Canada,           15%          −14.6%                  Composition tab (TFWP chart; Other TFWP workers with
+  Jan–Jul 2026 vs 2025                                                                        an LMIA)
+  B.C. share of Canada's permits, Jan–Jul 2025           18%          18.2%                   Figure C8 (Share column): 18.2% (84,165 of 461,760)
+  B.C. share of Canada's Jan–Jul 2026 increase           12%          12.1%                   Figure 2: 12.1% (25,640 of 211,520)
+  Ontario share of Canada's Jan–Jul 2026 increase        53%          52.9%                   Figure 2: 52.9% (111,840 of 211,520)
+  B.C. PGWP gain (27,165) exceeds B.C.'s total gain      (in words)   +27,165                 Calculated from the IRCC files
+  (25,640); other permits fell by 1,525
+  Table 1: all permits, B.C., Jan–Jul 2025               84,000       84,165                  Overview cards
+  Table 1: all permits, B.C., Jan–Jul 2026               110,000      109,805                 Overview cards
+  Table 1: all permits, B.C., Jan–Jul 2026 vs 2025       30%          +30.5%                  Overview cards
+  Table 1: all permits, Canada, Jan–Jul 2025             462,000      461,760                 Overview cards
+  Table 1: all permits, Canada, Jan–Jul 2026             673,000      673,280                 Overview cards
+  Table 1: all permits, Canada, Jan–Jul 2026 vs 2025     46%          +45.8%                  Overview cards
+  Table 1: PGWPs, B.C., Jan–Jul 2025                     15,000       15,450                  Composition tab (Figures C3, C4)
+  Table 1: PGWPs, B.C., Jan–Jul 2026                     43,000       42,615                  Composition tab (Figures C3, C4)
+  Table 1: PGWPs, B.C., Jan–Jul 2026 vs 2025             176%         +175.8%                 Composition tab (Figures C3, C4)
+  Table 1: PGWPs, Canada, Jan–Jul 2025                   86,000       86,295                  Composition tab (Figures C3, C4)
+  Table 1: PGWPs, Canada, Jan–Jul 2026                   266,000      266,050                 Composition tab (Figures C3, C4)
+  Table 1: PGWPs, Canada, Jan–Jul 2026 vs 2025           208%         +208.3%                 Composition tab (Figures C3, C4)
+  Table 1: permits other than PGWPs, B.C., Jan–Jul       69,000       68,715                  Calculated from the IRCC files (all permits minus PGWPs)
+  2025
+  Table 1: permits other than PGWPs, B.C., Jan–Jul       67,000       67,190                  Calculated from the IRCC files (all permits minus PGWPs)
   2026
-  Non-agricultural LMIA permits, Canada, 2021 to         more than      +212.9% (×3.13)        Composition tab (TFWP chart; Other TFWP workers with
-  2024                                                   tripled                               an LMIA)
-  Non-agricultural LMIA permits, Canada, 2024 to         21%            −21.0%                 Composition tab (TFWP chart; Other TFWP workers with
-  2025                                                                                         an LMIA)
-  Non-agricultural LMIA permits, Canada, Jan–Jul         15%            −14.6%                 Composition tab (TFWP chart; Other TFWP workers with
-  2026 vs 2025                                                                                 an LMIA)
-  B.C. share of Canada's Jan–Jul 2026 increase           12%            12.1%                  Figure 2: 12.1%
-  B.C. share of Canada's permits, Jan–Jul 2025           18%            18.2%                  Figure C8 (Share column): 18.2%
-  Ontario share of Canada's Jan–Jul 2026 increase        53%            52.9%                  Figure 2: 52.9% (111,840 of 211,520)
-  PGWP growth, B.C., Jan–Jul 2026 vs 2025                176%           +175.8%                Composition tab, B.C. (Figure C4): 15,450 to 42,615
-  PGWP growth, Canada, Jan–Jul 2026 vs 2025              208%           +208.3%                Figure C3: 86,295 to 266,050
-  Change in B.C. permits other than PGWPs, Jan–Jul       1,500          −1,525                 Calculated: B.C. increase 25,640 − PGWP increase 27,165
-  2025 to 2026
-  Change in Canada's permits other than PGWPs,           32,000         +31,765                Calculated: 211,520 − 179,755
-  Jan–Jul 2025 to 2026
-  B.C. PGWP gain (27,165) exceeds B.C.'s total gain      (in words)     +27,165                Calculated from the IRCC files
-  (25,640)
-  TFWP permits, B.C., Jan–Jul 2026 vs 2025               15%            −14.5%                 Figure C5 (B.C. bar for 2026)
-  TFWP permits, Alberta, Jan–Jul 2026 vs 2025            21%            −21.5%                 Geography comparison chart, Alberta, TFWP only: 11,025
-                                                                                               to 8,655
-  TFWP permits, Ontario, Jan–Jul 2026 vs 2025            (in words)     −0.3%                  Geography comparison chart, Ontario, TFWP only: 35,040
-                                                                                               to 34,920
-  Non-agricultural LMIA permits, B.C., Jan–Jul 2026 vs   32%            −31.6%                 Figure C6: 12,455 to 8,515
-  2025
-  Agricultural TFWP permits, B.C., Jan–Jul 2026 vs       (in words)     −0.3%                  Figure C6: 11,510 to 11,470
-  2025
-  TFWP share of all permits, B.C., 2025                  27%            27.1%                  Table C2; 35,865 of 132,520
-  TFWP share of all permits, Canada, 2025                22%            22.4%                  Table C2; 169,330 of 754,915
-  Non-agricultural LMIA permits, B.C., Jan–Jul 2026 vs   32%            −31.6%                 Figure C6
-  2025
-  Unknown IMP share of all permits, Canada, 2023         20%            20.5%                  Calculated from the IRCC files
-  Unknown IMP share of all permits, Canada, Jan–Jul      14%            14.4%                  Calculated from the IRCC files
-  2026
-
+  Table 1: permits other than PGWPs, B.C., Jan–Jul       2%           −2.2%                   Calculated from the IRCC files (all permits minus PGWPs)
+  2026 vs 2025
+  Table 1: permits other than PGWPs, Canada, Jan–        375,000      375,465                 Calculated from the IRCC files (all permits minus PGWPs)
+  Jul 2025
+  Table 1: permits other than PGWPs, Canada, Jan–        407,000      407,230                 Calculated from the IRCC files (all permits minus PGWPs)
+  Jul 2026
+  Table 1: permits other than PGWPs, Canada, Jan–        8%           +8.5%                   Calculated from the IRCC files (all permits minus PGWPs)
+  Jul 2026 vs 2025
+  Table 1: TFWP permits, B.C., Jan–Jul 2025              24,000       24,360                  Geography comparison, TFWP only (Figure C5)
 
                                                                                                    Mohsen Fazeli · Work permit insights for B.C. · page 9
   Statement in the note                               Shown              Exact value              Where to find it
+  Table 1: TFWP permits, B.C., Jan–Jul 2026           21,000             20,825                   Geography comparison, TFWP only (Figure C5)
+  Table 1: TFWP permits, B.C., Jan–Jul 2026 vs 2025   15%                −14.5%                   Geography comparison, TFWP only (Figure C5)
+  Table 1: TFWP permits, Canada, Jan–Jul 2025         119,000            118,515                  Geography comparison, TFWP only (Figure C5)
+  Table 1: TFWP permits, Canada, Jan–Jul 2026         113,000            112,790                  Geography comparison, TFWP only (Figure C5)
+  Table 1: TFWP permits, Canada, Jan–Jul 2026 vs      5%                 −4.8%                    Geography comparison, TFWP only (Figure C5)
+  2025
+  TFWP permits, B.C., Jan–Jul 2026 vs 2025            15%                −14.5%                   Table 1; Figure C5 (B.C. bar for 2026)
+  TFWP permits, Canada, Jan–Jul 2026 vs 2025          5%                 −4.8%                    Table 1; Trends tab, TFWP only
+  TFWP permits, Alberta, Jan–Jul 2026 vs 2025         21%                −21.5%                   Geography comparison chart, Alberta, TFWP only: 11,025
+                                                                                                  to 8,655
+  TFWP permits, Ontario, Jan–Jul 2026 vs 2025         (in words)         −0.3%                    Geography comparison chart, Ontario, TFWP only: 35,040
+                                                                                                  to 34,920
+  Non-farm employer-sponsored permits, B.C., Jan–     32%                −31.6%                   Figure C6: 12,455 to 8,515
+  Jul 2026 vs 2025
+  Farm (agricultural) TFWP permits, B.C., Jan–Jul     (in words)         −0.3%                    Figure C6: 11,510 to 11,470
+  2026 vs 2025
+  TFWP share of all permits, B.C., 2025               27%                27.1%                    Table C2; 35,865 of 132,520
+  TFWP share of all permits, Canada, 2025             22%                22.4%                    Table C2; 169,330 of 754,915
+  Non-farm employer-sponsored permits, B.C., Jan–     32%                −31.6%                   Figure C6
+  Jul 2026 vs 2025
+  Unknown IMP share of all permits, Canada, 2023      20%                20.5%                    Calculated from the IRCC files
+  Unknown IMP share of all permits, Canada, Jan–Jul   14%                14.4%                    Calculated from the IRCC files
+  2026
   Unknown IMP share of Alberta's Jan–Jul 2026         49%                49.2%                    Calculated from the IRCC files
   increase
+  Unknown IMP increase, Canada, Jan–Jul 2025 to       26,000             +26,185                  Figure C3 (Unknown or other IMP; 70,785 to 96,970)
+  2026
 
 Appendix E. Reproducing the analysis
  analysis_q2.R opens the dashboard's data (IRCC open data release of September 15, 2026 (data to July 2026): the
    two CSV files, saved in ../q1/data/baseline.rds; no live download) with the dashboard's code (../q1/R/data.R,
    ../q1/R/calc.R), computes every number, and writes facts_q2.csv and the tables.
- dashboard/Mohsen_2_dashboard_shots.R starts an unchanged copy of the dashboard (commit 3c6cae6) in a
+ dashboard/Mohsen_2_dashboard_shots.R starts an unchanged copy of the dashboard (commit 7d2fad4) in a
    headless browser, sets the filters named under each figure and saves the dashboard card as a picture
    (tables/figure_register.csv lists each figure's card title and filters).
  word/build_r2_docx.py builds this Word document (Mohsen_2.docx) from Mohsen's text (word/mohsen_text.md,
@@ -375,7 +403,12 @@ Appendix F. Full references
 [5] IRCC. Speaking notes for the Honourable Marc Miller, Minister of Immigration, Refugees and Citizenship: Announcement related to Temporary Residents.
      March 21, 2024. https://www.canada.ca/en/immigration-refugees-citizenship/news/2024/03/speaking-notes-for-the-honourable-marc-miller-minister-
      of-immigration-refugees-and-citizenship-announcement-related-to-temporary-residents.html (accessed October 17, 2026)
-[6] IRCC. Canada to stabilize growth and decrease number of new international student permits issued to approximately 360,000 for 2024. News release,
+
+
+
+
+                                                                                                     Mohsen Fazeli · Work permit insights for B.C. · page 10
+[6] IRCC. Canada to stabilize growth and decrease number of new international student permits issued to approximately 360,000 for 2024. News release,
      January 22, 2024. https://www.canada.ca/en/immigration-refugees-citizenship/news/2024/01/canada-to-stabilize-growth-and-decrease-number-of-
      new-international-student-permits-issued-to-approximately-360000-for-2024.html (accessed October 17, 2026)
 [7] Employment and Social Development Canada (ESDC). Minister Boissonnault reducing the number of temporary foreign workers in Canada. News release,
@@ -400,5 +433,5 @@ Appendix F. Full references
 
 
 
-                                                                                                     Mohsen Fazeli · Work permit insights for B.C. · page 10
+                                                                                                 Mohsen Fazeli · Work permit insights for B.C. · page 11
 

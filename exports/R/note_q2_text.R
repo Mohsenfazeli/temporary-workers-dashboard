@@ -134,16 +134,33 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
                      fmt_month_short(fx$peak$start), fmt_month_short(pk_end))
   pk_long <- sprintf("%s to %s", fmt_month(fx$peak$start), fmt_month(pk_end))
 
-  # Summary
+  # Oct 21, 2026 (reviewer feedback on the note): one time frame in the body
+  # (January–July, plus full years), a two-sentence bottom line, the summary in
+  # the order of the findings, Table 1 (B.C. and Canada), captions that state the
+  # takeaway, one label per concept ("issued", "employer-sponsored", "non-farm",
+  # "farm"), and the implications by priority, graduate retention first.
+  sg <- function(x, s) paste0(if (x >= 0) "+" else "\u2212", s)   # signed rounded percentage (Table 1)
+  bc_inc <- v("bc_ytd_increase")
+  bc_contrib_loc <- sprintf("Figure 2: %s (%s of %s)", fmt_share(bc_contrib), N(bc_inc), N(v("ca_ytd_increase")))
+  bc_share_loc <- sprintf("Figure C8 (Share column): %s (%s of %s)", fmt_share(bc_share_prev), N(ytdv("bc", "prev")), N(ytdv("ca", "prev")))
+  ab_t <- v("ab_tfwp_ytd_change"); on_t <- v("on_tfwp_ytd_change")
+
+  # ---- Summary: bottom line, then the bullets in the order of the findings ----
+  bl <- paste0(if (rebound) "Work permits are rebounding" else "Work permits are falling",
+               if (rebound && pgwp_drive) ", led by graduates" else "",
+               if (tfwp_faster) ", while employer-sponsored permits fall faster in B.C. than nationally." else
+                 if (bc_tfwp < 0) ", while employer-sponsored permits fall in B.C." else ".",
+               if (bc_all_grads) " B.C.’s growth now rests on graduates, whose routes to permanent residence have narrowed [10]; how many stay is the key planning question." else
+                 " Routes to permanent residence for graduates have narrowed [10]; how many stay is a key planning question.")
   s_b1_lead <- if (rebound && statcan) "Permits are rebounding, but the temporary population is not." else
     if (rebound) "Permits are rebounding." else "Permits are falling."
   s_b1 <- paste0("- ", s_b1_lead, " Permits ", ud(ca_chg), " ",
                  reg(2, "ca_ytd_change", "pct0", sprintf("Summary: permits %s %s, %s vs %s", ud(ca_chg), q2_round(ca_chg, "pct0"), ys, ysp),
                      sprintf("Overview card 2 (Figure C2): %s", fmt_pct(ca_chg))),
-                 " in ", YL(Y), " from a year earlier and, over 12 months, ",
-                 if (new_high12) "are at a new high" else paste0(if (rebound) "are back to " else "are at ",
-                   reg(3, "ca_last12_share_of_peak", "pct0", "Summary: latest 12-month total as a share of the 12-month peak", l12_loc),
-                   " of their peak"),
+                 " in ", YL(Y), " from the same months of ", PY,
+                 if (above_ph) { reg(3, paste0("ca_ytd", yy(P$PH)), "highest_ytd", sprintf("Summary: %s is the highest %s in the data", ys, YL()),
+                                     "Figure 1; calculated from the IRCC files", shown = "", phrase = "in the data")
+                   sprintf(", the highest %s in the data", YL()) } else "",
                  if (statcan && rebound) ", yet Statistics Canada estimates temporary residents fell [12]." else
                    if (statcan) "; Statistics Canada estimates temporary residents fell too [12]." else ".")
   pgwp_share_loc <- sprintf("Overview What the data show panel: %s of %s (%s)", N(v("pgwp_ytd_increase")),
@@ -152,7 +169,7 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
     paste0("- ", if (pgwp_drive) "Graduates drive the rebound." else "Graduates add to the rebound.",
            " Post-graduation work permits (PGWPs) supplied ",
            reg(4, "pgwp_share_of_increase", "pct0", sprintf("Summary: PGWPs' share of the %s increase", ys), pgwp_share_loc),
-           " of the increase.")
+           " of the national increase.")
   } else {
     paste0("- ", if (pgwp_up) "Graduate permits rose." else "Graduate permits fell.",
            " Post-graduation work permits (PGWPs) ", ud(pg_ca), " ",
@@ -160,44 +177,40 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
                sprintf("Figure C3: %s to %s", N(ytdv("pgwp", "prev")), N(ytdv("pgwp", "cur")))),
            " over the same months.")
   }
+  s_b3 <- if (rebound && bc_inc > 0) {
+    paste0("- ", if (bc_small) "B.C.’s share of the rebound is small." else "B.C. keeps pace with the rebound.",
+           " B.C. held ", reg(5, id$bc_share_prev, "pct0", sprintf("Summary: B.C. share of Canada's permits, %s", ysp), bc_share_loc),
+           " of Canada’s permits a year earlier ", if (bc_small) "but" else "and", " supplied ",
+           reg(6, "bc_contrib_ytd", "pct0", sprintf("Summary: B.C. share of Canada's %s increase", ys), bc_contrib_loc), " of the increase.")
+  } else {
+    bcc <- v("bc_ytd_change")
+    paste0("- ", if (rebound) "B.C. misses the rebound." else if (bcc < 0) "B.C. follows the national decline." else
+      "B.C. bucks the national decline.", " B.C. permits ", ud(bcc), " ",
+      reg(5, "bc_ytd_change", "pct0", sprintf("Summary: permits, B.C., %s", ytd_pair),
+          sprintf("Figure C8 / Geography tab: %s to %s", N(ytdv("bc", "prev")), N(ytdv("bc", "cur")))),
+      " over the same months.")
+  }
   tfwp_lead <- if (tfwp_faster) "Employer-sponsored permits are falling faster in B.C." else
     if (bc_tfwp < 0 && ca_tfwp < 0) "Employer-sponsored permits are falling, though more slowly in B.C." else
       if (bc_tfwp < 0) "Employer-sponsored permits are falling in B.C." else
         if (ca_tfwp < 0) "Employer-sponsored permits are rising in B.C. but falling nationally." else
           "Employer-sponsored permits are rising."
-  s_b3 <- paste0("- ", tfwp_lead, " Temporary Foreign Worker Program (TFWP) permits ", ud(bc_tfwp), " ",
-                 reg(5, "bc_tfwp_ytd_change", "pct0", sprintf("Summary: TFWP permits, B.C., %s", ytd_pair), paste("Figure C5", loc_c5)),
-                 " in B.C. over the same months, against ",
-                 if ((bc_tfwp < 0) == (ca_tfwp < 0)) "" else "a ",
-                 reg(6, "tfwp_ytd_change", "pct0", sprintf("Summary: TFWP permits, Canada, %s", ytd_pair),
+  same_dir <- (bc_tfwp < 0) == (ca_tfwp < 0)
+  s_b4 <- paste0("- ", tfwp_lead, " Temporary Foreign Worker Program (TFWP) permits ", ud(bc_tfwp), " ",
+                 reg(7, "bc_tfwp_ytd_change", "pct0", sprintf("Summary: TFWP permits, B.C., %s", ytd_pair), paste("Figure C5", loc_c5)),
+                 " in B.C. over the same months, against ", if (same_dir) "" else "a ",
+                 reg(8, "tfwp_ytd_change", "pct0", sprintf("Summary: TFWP permits, Canada, %s", ytd_pair),
                      sprintf("Trends tab, change from a year earlier: TFWP %s %s (%s to %s)", if (ca_tfwp < 0) "down" else "up",
                              sprintf("%.1f%%", abs(100 * ca_tfwp)), N(ytdv("tfwp", "prev")), N(ytdv("tfwp", "cur")))),
-                 if ((bc_tfwp < 0) == (ca_tfwp < 0)) "" else paste0(" ", ud(ca_tfwp, "rise", "fall")),
-                 " nationally.")
-  bc_contrib_loc <- sprintf("Figure 2: %s (%s of %s)", fmt_share(bc_contrib), N(v("bc_ytd_increase")), N(v("ca_ytd_increase")))
-  bc_share_loc <- sprintf("Figure C8 (Share column): %s (%s of %s)", fmt_share(bc_share_prev), N(ytdv("bc", "prev")), N(ytdv("ca", "prev")))
-  s_b4 <- if (rebound && v("bc_ytd_increase") > 0) {
-    paste0("- ", if (bc_small) "B.C.’s share of the rebound is small." else "B.C. keeps pace with the rebound.",
-           " It supplied ", reg(7, "bc_contrib_ytd", "pct0", sprintf("Summary: B.C. share of Canada's %s increase", ys), bc_contrib_loc),
-           " of the increase, ", if (bc_small) "though it held " else "and held ",
-           reg(8, id$bc_share_prev, "pct0", sprintf("Summary: B.C. share of Canada's permits, %s", ysp), bc_share_loc),
-           " of permits a year earlier.")
-  } else {
-    bcc <- v("bc_ytd_change")
-    paste0("- ", if (rebound) "B.C. misses the rebound." else if (bcc < 0) "B.C. follows the national decline." else
-      "B.C. bucks the national decline.", " B.C. permits ", ud(bcc), " ",
-      reg(7, "bc_ytd_change", "pct0", sprintf("Summary: permits, B.C., %s", ytd_pair),
-          sprintf("Figure C8 / Geography tab: %s to %s", N(ytdv("bc", "prev")), N(ytdv("bc", "cur")))),
-      " over the same months.")
-  }
-  for_bc <- if (bc_all_grads) "For B.C.: growth now rests on graduates, whose routes to permanent residence have narrowed [10]. How many stay is the key planning question." else NULL
+                 if (same_dir) "" else paste0(" ", ud(ca_tfwp, "rise", "fall")), " nationally.")
 
-  # Background
-  bg2 <- sprintf("The data, from IRCC’s open data release of %s, count permits that took effect each month, by intended province, from %s to %s [1, 2]. %s Figures are rounded; exact values are in Appendix D.",
+  # ---- Background -------------------------------------------------------------
+  bg1 <- sprintf("This note uses Immigration, Refugees and Citizenship Canada (IRCC) work permit data [1, 2], analysed in the accompanying dashboard [13], to inform B.C. labour market and skills planning, including the B.C. Labour Market Outlook [3]. The data, from IRCC’s open data release of %s, count permits issued each month, by intended province, from %s to %s [1, 2]. %s Policy events are context: the data show timing, not cause. Figures are rounded; exact values are in Appendix D.",
                  if (is.na(release_date)) fmt_date(Sys.Date()) else fmt_date(release_date), fmt_month(P$first), fmt_month(P$latest),
                  if (P$M == 12) sprintf("%d is compared with %d.", Y, PY) else sprintf("%s is compared with the same months of %d.", YL(Y), PY))
+  bg2 <- "The TFWP lets employers hire foreign workers, usually after a Labour Market Impact Assessment (LMIA) shows no Canadian is available; this note calls these permits employer-sponsored, split into farm permits (agricultural streams) and non-farm permits (IRCC’s “other workers with an LMIA”). The International Mobility Program (IMP) needs no LMIA; it covers PGWPs for graduates of Canadian institutions [11], spouses and youth exchanges."
 
-  # Findings 1
+  # ---- Findings 1: full years, then the same months (no 12-month totals) ----------
   gw <- q2_multiple_word(ratio)
   h1 <- paste0("Permits ", if (fell_after_peak && rebound) paste0(gw, ", fell, and are climbing again") else
     if (fell_after_peak) paste0(gw, ", fell, and are still falling") else
@@ -211,29 +224,30 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
                                    shown = "", phrase = "dipping only in 2020")
                   ", dipping only in 2020, when COVID-19 travel restrictions took effect [4]." } else
                   if (dip_any2020) ", with a dip in 2020, when COVID-19 travel restrictions took effect [4]." else ".")
-  peak_txt <- reg(12, "ca_r12_peak", "M2", sprintf("Highest 12-month total (%s), Canada", pk_long), "Calculated from the IRCC files")
   lf_txt <- reg(13, paste0("ca_", LF), "k", sprintf("Permits, Canada, %d", LF), c1)
-  f1b <- if (peak_then_fell) sprintf("Over 12-month periods, they peaked at %s in the year to %s, then fell to %s in %d.", peak_txt, fmt_month(pk_end), lf_txt, LF) else
-    sprintf("Over 12-month periods, they peaked at %s in the year to %s; %d totalled %s.", peak_txt, fmt_month(pk_end), LF, lf_txt)
-  f1c <- if (policy_decline) "The decline followed a federal target to lower temporary residents’ share of the population [5] and tighter study permit, PGWP and TFWP rules [6–8], although the data show timing, not cause." else NULL
-  f1 <- paste(c(f1a, f1b, f1c), collapse = " ")
+  f1b <- if (policy_decline) sprintf("They fell to %s in %d, after a federal target to lower temporary residents’ share of the population [5] and tighter study permit, PGWP and TFWP rules [6–8].", lf_txt, LF) else
+    if (fell_after_peak) sprintf("They fell to %s in %d.", lf_txt, LF) else sprintf("They reached %s in %d.", lf_txt, LF)
+  f1 <- paste(f1a, f1b)
   f2a <- paste0("In ", YL(Y), ", ", reg(14, id$ytd_cur, "k", sprintf("Permits, Canada, %s", ys), sprintf("Overview card 1 (Figure C2): %s", N(v(id$ytd_cur)))),
-                " permits took effect, ",
+                " permits were issued, ",
                 reg(15, "ca_ytd_change", "pct0", sprintf("Permits, Canada, %s vs %s", ys, ysp), sprintf("Overview card 2 (Figure C2): %s", fmt_pct(ca_chg))),
-                if (rebound) " more" else " fewer", " than a year earlier",
-                if (above_ph) { reg(16, paste0("ca_ytd", yy(P$PH)), "above2024",
-                                    sprintf("%s above the previous high for these months (%s: %s)", ys, YS(P$PH), N(max(P$ytd_prior))), "Figure 1",
-                                    shown = "", phrase = sprintf("above the %d high", P$PH))
-                  sprintf(" and above the %d high for these months", P$PH) } else
-                  if (rebound) sprintf(" but below the %d high for these months", P$PH) else "",
+                if (rebound) " more" else " fewer", " than in the same months of ", PY,
+                if (above_ph) { reg(16, paste0("ca_ytd", yy(P$PH)), "highest_ytd",
+                                    sprintf("%s is the highest %s in the data (previous high %s: %s)", ys, YL(), YS(P$PH), N(max(P$ytd_prior))),
+                                    "Figure 1 (tallest bar); calculated from the IRCC files", shown = "", phrase = "the highest")
+                  sprintf(" and the highest %s in the data", YL()) } else
+                  if (rebound) sprintf(", but below the %d high for these months", P$PH) else "",
                 " (Figure 1).")
   f2b <- if (statcan) { reg(17, "context_statcan_npr", "statcan", "Statistics Canada: non-permanent residents, July 1, 2025 to July 1, 2026",
                             "Statistics Canada, The Daily, September 23, 2026 [12]: \u2212154,614 (to 2,779,774); not IRCC data")
     paste0(if (rebound) "Yet permits are not people: " else "Permits are not people: ",
-           "Statistics Canada estimates that non-permanent residents fell by 155,000 in the year to July 1, 2026, led by study permit holders [12].") } else NULL
+           "Statistics Canada estimates that non-permanent residents fell by 155,000 in the year to July 1, 2026, led by study permit holders [12].",
+           if (rebound && pgwp_up) " Permits can rise while people fall, likely because new PGWPs go to graduates of Canadian institutions [11], who were already in Canada as students." else "") } else NULL
   f2 <- paste(c(f2a, f2b), collapse = " ")
+  fig1_cap <- if (above_ph) sprintf("Figure 1. %s has the most permits of any %s in the data.", YL(Y), if (P$M == 12) "year" else YL()) else
+    if (P$M == 12) "Figure 1. Permits issued, by year, Canada." else sprintf("Figure 1. Permits issued, %s of each year, Canada.", YL())
 
-  # Findings 2
+  # ---- Findings 2 -------------------------------------------------------------
   h2 <- if (pgwp_up && lmia_down) "Graduates lift permits; employer-sponsored permits fall" else
     if (pgwp_up) "Graduates lift permits; employer-sponsored permits also rise" else
       if (lmia_down) "Graduate and employer-sponsored permits both fall" else "Graduate permits fall; employer-sponsored permits rise"
@@ -243,45 +257,39 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
   inc_txt <- function(o) reg(o, "ca_ytd_increase", "k", sprintf("Total %s, Canada, %s to %d", inc_word, ysp, Y),
                              sprintf("Overview card 2 (%s \u2212 %s)", N(v(id$ytd_cur)), N(v(id$ytd_prev))))
   f3a <- if (pgwp_up && rebound) {
-    sprintf("In %s, PGWPs rose from %s to %s, supplying %s of the %s additional permits (Figure C3).", YL(), pg_prev, pg_cur,
-            reg(20, "pgwp_ytd_increase", "k", sprintf("PGWP increase, Canada, %s to %d", ysp, Y),
-                sprintf("Calculated from Figure C3 values (%s \u2212 %s)", N(ytdv("pgwp", "cur")), N(ytdv("pgwp", "prev")))), inc_txt(21))
+    paste0(sprintf("In %s, PGWPs rose from %s to %s. ", YL(), pg_prev, pg_cur),
+           sprintf("They supplied %s of the %s additional permits.",
+                   reg(20, "pgwp_ytd_increase", "k", sprintf("PGWP increase, Canada, %s to %d", ysp, Y),
+                       sprintf("Calculated from Figure C3 values (%s \u2212 %s)", N(ytdv("pgwp", "cur")), N(ytdv("pgwp", "prev")))), inc_txt(21)))
   } else if (pgwp_up) {
-    sprintf("In %s, PGWPs rose from %s to %s, while total permits fell by %s (Figure C3).", YL(), pg_prev, pg_cur, inc_txt(21))
-  } else sprintf("In %s, PGWPs fell from %s to %s (Figure C3).", YL(), pg_prev, pg_cur)
+    sprintf("In %s, PGWPs rose from %s to %s, while total permits fell by %s.", YL(), pg_prev, pg_cur, inc_txt(21))
+  } else sprintf("In %s, PGWPs fell from %s to %s.", YL(), pg_prev, pg_cur)
   f3b <- if (pgwp_up) "The cause is untested; larger student cohorts admitted before the 2024 study permit cap [6] may now be graduating." else NULL
-  unk_loc <- sprintf("Figure C3 (Unknown or other IMP; %s to %s)", N(ytdv("unk", "prev")), N(ytdv("unk", "cur")))
-  f3c <- if (pgwp_up && unk_up) paste0("The rise is real, not a recoding: permits with no identified program (“Unknown IMP”) also rose, by ",
-                                      reg(22, "unk_ytd_increase", "k", sprintf("Unknown IMP increase, Canada, %s to %d", ysp, Y), unk_loc), ".") else
-    if (pgwp_up) paste0("Part of the rise may be a recoding: permits with no identified program (“Unknown IMP”) fell by ",
-                        reg(22, "unk_ytd_increase", "k", sprintf("Unknown IMP decrease, Canada, %s to %d", ysp, Y), unk_loc), ".") else NULL
-  f3 <- paste(c(f3a, f3b, f3c), collapse = " ")
+  f3 <- paste(c(f3a, f3b), collapse = " ")
   comp_tfwp <- "Composition tab (TFWP chart; Other TFWP workers with an LMIA)"
   lmia_lead <- if (lmia_down == pgwp_up) "Employer-sponsored permits moved the other way." else "Employer-sponsored permits moved the same way."
   lmia_w <- q2_multiple_word(v("lmia_2024") / v("lmia_2021"))
-  lm21 <- reg(23, "lmia_growth_2021_2024", "tripled", "Non-agricultural LMIA permits, Canada, 2021 to 2024", comp_tfwp, shown = lmia_w)
-  lm25 <- reg(24, "lmia_fall_2024_2025", "pct0", "Non-agricultural LMIA permits, Canada, 2024 to 2025", comp_tfwp)
-  lmy <- reg(25, "lmia_ytd_change", "pct0", sprintf("Non-agricultural LMIA permits, Canada, %s", ytd_pair), comp_tfwp)
-  f4 <- paste0(lmia_lead, " Non-agricultural LMIA permits ", lm21, " from 2021 to 2024, after low-wage caps were raised in 2022 [9]. They then ",
-               if (lmia_fell25) paste0("fell ", lm25, " in 2025") else paste0("rose ", lm25, " in 2025"),
-               if (lmia_fell25 && lmia_down) paste0(" and another ", lmy, " in ", YL(Y)) else
-                 paste0(if (lmia_down) " and fell " else ", and rose ", lmy, " in ", YL(Y)),
+  lm21 <- reg(23, "lmia_growth_2021_2024", "tripled", "Non-farm employer-sponsored permits (IRCC: other workers with an LMIA), Canada, 2021 to 2024", comp_tfwp, shown = lmia_w)
+  lm25 <- reg(24, "lmia_fall_2024_2025", "pct0", "Non-farm employer-sponsored permits, Canada, 2024 to 2025", comp_tfwp)
+  lmy <- reg(25, "lmia_ytd_change", "pct0", sprintf("Non-farm employer-sponsored permits, Canada, %s", ytd_pair), comp_tfwp)
+  f4 <- paste0(lmia_lead, " Nationally, non-farm permits ", lm21, " from 2021 to 2024, after low-wage caps were raised in 2022 [9]. They then ",
+               if (lmia_fell25) "fell " else "rose ", lm25, " from 2024 to 2025",
+               if (lmia_fell25 && lmia_down) " and another " else if (lmia_down) " and fell " else ", and rose ", lmy, " in ", YL(Y), " from a year earlier",
                if (lmia_fell25) ", after the 2024 low-wage limits [7]." else ".")
 
-  # Findings 3
+  # ---- Findings 3: one sentence on shares; Table 1 holds the detail -------------
   h3 <- if (bc_small) "B.C.’s share of the rebound shrinks" else if (rebound) "B.C.’s share of the rebound" else "B.C. in the national decline"
   top_name <- if (top == "British Columbia") "B.C." else top
   top_loc <- sprintf("Figure 2: %s (%s of %s)", fmt_share(v(paste0(top_k, "_contrib_ytd"))), N(v(paste0(top_k, "_ytd_increase"))), N(v("ca_ytd_increase")))
-  f5a <- if (rebound && v("bc_ytd_increase") > 0) {
-    paste0("B.C. supplied ", reg(26, "bc_contrib_ytd", "pct0", sprintf("B.C. share of Canada's %s increase", ys), sprintf("Figure 2: %s", fmt_share(bc_contrib))),
-           " of the national increase, ", if (bc_contrib < bc_share_prev) "below" else "above", " its ",
-           reg(27, id$bc_share_prev, "pct0", sprintf("B.C. share of Canada's permits, %s", ysp), sprintf("Figure C8 (Share column): %s", fmt_share(bc_share_prev))),
-           " share of permits a year earlier (Figure C8)",
-           if (top == "British Columbia") "; no province supplied more (Figure 2)." else
-             paste0("; ", top_name, " supplied ", reg(28, paste0(top_k, "_contrib_ytd"), "pct0", sprintf("%s share of Canada's %s increase", top_name, ys), top_loc), " (Figure 2)."))
+  f5a <- if (rebound && bc_inc > 0) {
+    paste0("B.C. held ", reg(26, id$bc_share_prev, "pct0", sprintf("B.C. share of Canada's permits, %s", ysp), bc_share_loc),
+           " of Canada’s permits in ", YL(PY), if (bc_small) " but" else " and", " supplied ",
+           reg(27, "bc_contrib_ytd", "pct0", sprintf("B.C. share of Canada's %s increase", ys), bc_contrib_loc), " of the increase to ", Y, ". ",
+           if (top == "British Columbia") "No province supplied more (Figure 2)." else
+             paste0(top_name, " supplied ", reg(28, paste0(top_k, "_contrib_ytd"), "pct0", sprintf("%s share of Canada's %s increase", top_name, ys), top_loc), " (Figure 2)."))
   } else if (rebound) {
     paste0("B.C. permits fell by ", reg(26, "bc_ytd_increase", "k", sprintf("Change in B.C. permits, %s to %d", ysp, Y), "Figure 2"),
-           " while Canada’s rose (Figure 2); ", top_name, " supplied ",
+           " while Canada’s rose (Figure 2). ", top_name, " supplied ",
            reg(28, paste0(top_k, "_contrib_ytd"), "pct0", sprintf("%s share of Canada's %s increase", top_name, ys), top_loc), " of the national increase.")
   } else {
     bcc <- v("bc_ytd_change")
@@ -289,86 +297,102 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
            ", against a ", reg(27, "ca_ytd_change", "pct0", sprintf("Permits, Canada, %s", ytd_pair), sprintf("Overview card 2 (Figure C2): %s", fmt_pct(ca_chg))),
            " fall nationally (Figure 2).")
   }
-  reasons <- c(
-    if (bc_pgwp_slower) sprintf("B.C.’s PGWPs grew more slowly than Canada’s (%s against %s)",
-                                reg(29, "bc_pgwp_ytd_change", "pct0", sprintf("PGWP growth, B.C., %s", ytd_pair),
-                                    sprintf("Composition tab, B.C. (Figure C4): %s to %s", N(ytdv("bc_pgwp", "prev")), N(ytdv("bc_pgwp", "cur")))),
-                                reg(30, "pgwp_ytd_change", "pct0", sprintf("PGWP growth, Canada, %s", ytd_pair),
-                                    sprintf("Figure C3: %s to %s", N(ytdv("pgwp", "prev")), N(ytdv("pgwp", "cur"))))),
-    if (bc_other_down) sprintf("its other permits fell by %s while Canada’s rose by %s",
-                               reg(31, "bc_other_ytd_change", "h", sprintf("Change in B.C. permits other than PGWPs, %s to %d", ysp, Y),
-                                   sprintf("Calculated: B.C. increase %s \u2212 PGWP increase %s", N(v("bc_ytd_increase")), N(v("bc_pgwp_ytd_increase")))),
-                               reg(32, "ca_other_ytd_change", "k", sprintf("Change in Canada's permits other than PGWPs, %s to %d", ysp, Y),
-                                   sprintf("Calculated: %s \u2212 %s", N(v("ca_ytd_increase")), N(v("pgwp_ytd_increase"))))))
-  f5b <- if (!bc_small || !length(reasons)) NULL else if (length(reasons) == 2)
-    paste0("Two things explain the gap. ", reasons[1], ", and ", reasons[2], ".") else
-      paste0("One thing explains part of the gap: ", reasons[1], ".")
-  if (!is.null(f5b) && length(reasons) == 1 && !bc_pgwp_slower) f5b <- sub(": its other", ": B.C.’s other", f5b, fixed = TRUE)
-  f5c <- if (bc_all_grads) { reg(33, "bc_pgwp_ytd_increase", "pgwp_gt_total",
-                                 sprintf("B.C. PGWP gain (%s) exceeds B.C.'s total gain (%s)", N(v("bc_pgwp_ytd_increase")), N(v("bc_ytd_increase"))),
-                                 "Calculated from the IRCC files", shown = "", phrase = "All of B.C.’s growth")
-    paste0("All of B.C.’s growth ", if (bc_other_down) "therefore " else "", "came from graduates.") } else NULL
-  f5 <- paste(c(f5a, f5b, f5c), collapse = " ")
-  fig2_cap <- sprintf("Figure 2. Share of Canada’s %s %s, by province and territory.", YL(Y), inc_word)
+  f5c <- if (bc_all_grads) { reg(29, "bc_pgwp_ytd_increase", "pgwp_gt_total",
+                                 sprintf("B.C. PGWP gain (%s) exceeds B.C.'s total gain (%s); other permits fell by %s", N(v("bc_pgwp_ytd_increase")), N(bc_inc),
+                                         N(abs(v("bc_other_ytd_change")))),
+                                 "Calculated from the IRCC files", shown = "", phrase = "more than all of B.C.’s growth")
+    paste0("Graduates account for more than all of B.C.’s growth", if (bc_other_down) "; other permits fell" else "", " (Table 1).") } else
+      "Table 1 compares B.C. with Canada."
+  f5 <- paste(f5a, f5c)
 
+  # Table 1: four rows, B.C. and Canada, the same months of PY and Y
+  t1 <- list(all = list("All permits", c("bc", "ca"), c("bc_ytd_change", "ca_ytd_change"), "all permits", "Overview cards"),
+             pgwp = list("PGWPs", c("bc_pgwp", "pgwp"), c("bc_pgwp_ytd_change", "pgwp_ytd_change"), "PGWPs", "Composition tab (Figures C3, C4)"),
+             other = list("All other permits (all minus PGWPs)", c("bc_other", "ca_other"), c("bc_other_ytd_pct", "ca_other_ytd_pct"),
+                          "permits other than PGWPs", "Calculated from the IRCC files (all permits minus PGWPs)"),
+             tfwp = list("of which employer-sponsored (TFWP)", c("bc_tfwp", "tfwp"), c("bc_tfwp_ytd_change", "tfwp_ytd_change"),
+                         "TFWP permits", "Geography comparison, TFWP only (Figure C5)"))
+  t1_rows <- character(); o <- 30
+  for (r in t1) {
+    cells <- character()
+    for (g in 1:2) {
+      gn <- c("B.C.", "Canada")[g]; ids <- paste0(r[[2]][g], "_ytd", yy(c(PY, Y)))
+      cells <- c(cells,
+                 reg(o + 0.1, ids[1], "k", sprintf("Table 1: %s, %s, %s", r[[4]], gn, ysp), r[[5]]),
+                 reg(o + 0.2, ids[2], "k", sprintf("Table 1: %s, %s, %s", r[[4]], gn, ys), r[[5]]),
+                 sg(v(r[[3]][g]), reg(o + 0.3, r[[3]][g], "pct0", sprintf("Table 1: %s, %s, %s", r[[4]], gn, ytd_pair), r[[5]])))
+      o <- o + 1
+    }
+    t1_rows <- c(t1_rows, paste0("| ", paste(c(r[[1]], cells), collapse = " | "), " |"))
+  }
+  t1_head <- sprintf("| Permits issued, %s | B.C. %d | B.C. %d | B.C. change | Canada %d | Canada %d | Canada change |",
+                     if (P$M == 12) "full year" else YL(), PY, Y, PY, Y)
+  t1_cap <- if (bc_all_grads && bc_other_down) "Table 1. B.C. grew only through graduates; its other permits fell, while Canada’s rose." else
+    sprintf("Table 1. Permits issued, B.C. and Canada, %s and %s.", ysp, ys)
+  fig2_cap <- sprintf("Figure 2. %s supplied %s of Canada’s %s %s%s", top_name,
+                      if (v(paste0(top_k, "_contrib_ytd")) > 0.5) "most" else "the largest share", YL(Y), inc_word,
+                      if (bc_small && top != "British Columbia") "; B.C. less than its share." else ".")
+
+  # Employer-sponsored permits in B.C., with Canada (Table 1), Alberta and Ontario
   f6_lead <- if (tfwp_faster) "Employer-sponsored permits are also falling faster in B.C." else tfwp_lead
-  ab_t <- v("ab_tfwp_ytd_change")
   bc_part <- if (near0(bc_tfwp)) "were almost unchanged in B.C." else paste0(ud(bc_tfwp), " ",
-    reg(34, "bc_tfwp_ytd_change", "pct0", sprintf("TFWP permits, B.C., %s", ytd_pair), "Figure C5 (B.C. bar for 2026)"), " in B.C.")
-  ab_num <- function() reg(35, "ab_tfwp_ytd_change", "pct0", sprintf("TFWP permits, Alberta, %s", ytd_pair),
-                           sprintf("Geography comparison chart, Alberta, TFWP only: %s to %s", N(ytdv("ab_tfwp", "prev")), N(ytdv("ab_tfwp", "cur"))))
-  on_t <- v("on_tfwp_ytd_change")
-  ab_same <- !near0(bc_tfwp) && (ab_t < 0) == (bc_tfwp < 0)
-  on_same <- ab_same && !on_flat && (on_t < 0) == (bc_tfwp < 0)     # all three the same way: one list
-  ab_part <- if (on_same) paste0(", ", ab_num(), " in Alberta") else if (ab_same) paste0(" and ", ab_num(), " in Alberta") else
-    paste0(", ", ud(ab_t), " ", ab_num(), " in Alberta")
+    reg(38, "bc_tfwp_ytd_change", "pct0", sprintf("TFWP permits, B.C., %s", ytd_pair), sprintf("Table 1; Figure C5 (B.C. bar for %d)", Y)), " in B.C.")
+  ca_part <- paste0(", against ", if (same_dir) "" else "a ",
+                    reg(39, "tfwp_ytd_change", "pct0", sprintf("TFWP permits, Canada, %s", ytd_pair), "Table 1; Trends tab, TFWP only"),
+                    if (same_dir) "" else paste0(" ", ud(ca_tfwp, "rise", "fall")), " in Canada (Table 1).")
+  ab_txt <- paste0("They ", ud(ab_t), " ", reg(40, "ab_tfwp_ytd_change", "pct0", sprintf("TFWP permits, Alberta, %s", ytd_pair),
+                                               sprintf("Geography comparison chart, Alberta, TFWP only: %s to %s", N(ytdv("ab_tfwp", "prev")), N(ytdv("ab_tfwp", "cur")))),
+                   " in Alberta")
   on_loc <- sprintf("Geography comparison chart, Ontario, TFWP only: %s to %s", N(ytdv("on_tfwp", "prev")), N(ytdv("on_tfwp", "cur")))
-  on_part <- if (on_flat) { reg(36, "on_tfwp_ytd_change", "near0", sprintf("TFWP permits, Ontario, %s", ytd_pair), on_loc,
-                                shown = "", phrase = "almost unchanged in Ontario")
-    ", but were almost unchanged in Ontario" } else
-      paste0(if (on_same) " and " else paste0(", and ", ud(on_t), " "),
-             reg(36, "on_tfwp_ytd_change", "pct0", sprintf("TFWP permits, Ontario, %s", ytd_pair), on_loc), " in Ontario")
-  f6b <- paste0("In ", YL(), ", TFWP permits ", bc_part, ab_part, on_part, " (Figure C5).")
-  f6b <- sub("Figure C5 (B.C. bar for 2026)", sprintf("Figure C5 (B.C. bar for %d)", Y), f6b, fixed = TRUE)
+  on_txt <- if (on_flat) { reg(41, "on_tfwp_ytd_change", "near0", sprintf("TFWP permits, Ontario, %s", ytd_pair), on_loc,
+                               shown = "", phrase = "almost unchanged in Ontario")
+    paste0(if (ab_t < 0) " but" else " and", " were almost unchanged in Ontario.") } else
+      paste0(if ((on_t < 0) == (ab_t < 0)) " and " else " but ", ud(on_t), " ",
+             reg(41, "on_tfwp_ytd_change", "pct0", sprintf("TFWP permits, Ontario, %s", ytd_pair), on_loc), " in Ontario.")
+  f6b <- paste0("In ", YL(), ", TFWP permits ", bc_part, ca_part, " ", ab_txt, on_txt)
   c6 <- function() sprintf("Figure C6: %s to %s", N(ytdv("bc_lmia", "prev")), N(ytdv("bc_lmia", "cur")))
   agri_loc <- sprintf("Figure C6: %s to %s", N(ytdv("bc_agri", "prev")), N(ytdv("bc_agri", "cur")))
-  lmia_num <- reg(37, "bc_lmia_ytd_change", "pct0", sprintf("Non-agricultural LMIA permits, B.C., %s", ytd_pair), c6())
-  agri_txt <- if (agri_flat) { reg(38, "bc_agri_ytd_change", "near0", sprintf("Agricultural TFWP permits, B.C., %s", ytd_pair), agri_loc,
-                                   shown = "", phrase = "agricultural permits held steady")
-    "agricultural permits held steady" } else
-      paste0("agricultural permits ", ud(v("bc_agri_ytd_change")), " ",
-             reg(38, "bc_agri_ytd_change", "pct0", sprintf("Agricultural TFWP permits, B.C., %s", ytd_pair), agri_loc))
-  f6c <- if (bc_tfwp < 0 && bc_lmia_down) sprintf("B.C.’s decline is in non-agricultural LMIA permits (down %s); %s (Figure C6).", lmia_num, agri_txt) else
-    sprintf("In B.C., non-agricultural LMIA permits were %s %s; %s (Figure C6).", if (bc_lmia_down) "down" else "up", lmia_num, agri_txt)
-  bts <- reg(39, id$bc_tfwp_share, "pct0", sprintf("TFWP share of all permits, B.C., %d", LF),
+  lmia_num <- reg(42, "bc_lmia_ytd_change", "pct0", sprintf("Non-farm employer-sponsored permits, B.C., %s", ytd_pair), c6())
+  agri_txt <- if (agri_flat) { reg(43, "bc_agri_ytd_change", "near0", sprintf("Farm (agricultural) TFWP permits, B.C., %s", ytd_pair), agri_loc,
+                                   shown = "", phrase = "farm permits held steady")
+    "farm permits held steady" } else
+      paste0("farm permits ", ud(v("bc_agri_ytd_change")), " ",
+             reg(43, "bc_agri_ytd_change", "pct0", sprintf("Farm (agricultural) TFWP permits, B.C., %s", ytd_pair), agri_loc))
+  f6c <- if (bc_tfwp < 0 && bc_lmia_down) sprintf("B.C.’s decline is in non-farm permits (down %s); %s.", lmia_num, agri_txt) else
+    sprintf("In B.C., non-farm permits were %s %s; %s.", if (bc_lmia_down) "down" else "up", lmia_num, agri_txt)
+  bts <- reg(44, id$bc_tfwp_share, "pct0", sprintf("TFWP share of all permits, B.C., %d", LF),
              sprintf("Table C2; %s of %s", N(v(paste0("bc_tfwp_", LF))), N(v(paste0("bc_", LF)))))
-  cts <- reg(40, id$ca_tfwp_share, "pct0", sprintf("TFWP share of all permits, Canada, %d", LF),
+  cts <- reg(45, id$ca_tfwp_share, "pct0", sprintf("TFWP share of all permits, Canada, %d", LF),
              sprintf("Table C2; %s of %s", N(v(paste0("tfwp_", LF))), N(v(paste0("ca_", LF)))))
-  f6d <- paste0("The TFWP is ", bts, " of B.C.’s permits against ", cts, " nationally (", LF, ")",
+  f6d <- paste0("The TFWP was ", bts, " of B.C.’s ", LF, " permits, against ", cts, " nationally",
                 if (tfwp_heavier && bc_tfwp < 0) ", so this decline weighs more on B.C." else if (tfwp_heavier) ", so these permits matter more for B.C." else ".")
-  if (!grepl("\\.$", f6d)) f6d <- f6d
   f6 <- paste(f6_lead, f6b, f6c, f6d)
 
-  # Implications
-  i1 <- paste0("- Track temporary labour supply monthly. The Outlook expects temporary residents to flow out of B.C. over 2025–2035 [3]",
-               if (statcan && rebound) "; the falling temporary population fits this, despite rising permits." else
-                 if (statcan) "; the falling temporary population fits this." else ".",
+  # ---- Implications, by priority: graduate retention first ---------------------
+  i1 <- paste0("- Find out how many graduates stay. ",
+               if (bc_all_grads) sprintf("Graduates account for more than all of B.C.’s growth in %d (Table 1). ", Y) else "",
+               "The study permit cap may shrink future graduating classes, and routes to permanent residence have narrowed: the 2025 BC Provincial Nominee Program allocation was cut and its international post-graduate stream closed [10]. An IRCC data request for PGWPs by B.C. economic region and institution would show how many graduates stay, and where, helping test whether their skills match high-opportunity occupations.")
+  i2 <- paste0("- Identify sectors ", if (bc_lmia_down) "losing" else "gaining", " employer-sponsored workers. IRCC’s TFWP tables by occupation would show which B.C. occupations account for the ",
+               reg(46, "bc_lmia_ytd_change", "pct0", sprintf("Non-farm employer-sponsored permits, B.C., %s", ytd_pair), "Figure C6"),
+               if (bc_lmia_down) " fall" else " rise", " in non-farm permits.")
+  i3 <- paste0("- Track temporary labour supply monthly. The Outlook expects temporary residents to flow out of B.C. over 2025–2035 [3]",
+               if (statcan) "; the falling temporary population [12] fits this." else ".",
                " Reading monthly IRCC permits with Statistics Canada population estimates would show early if supply strays from that path.")
-  i2 <- "- Find out how many graduates stay. The study permit cap may shrink future graduating classes, and routes to permanent residence have narrowed: the 2025 BC Provincial Nominee Program allocation was cut and its international post-graduate stream closed [10]. An IRCC data request for PGWPs by B.C. economic region and institution would show how many graduates stay, and where, helping test whether their skills match high-opportunity occupations."
-  i3 <- paste0("- Identify sectors ", if (bc_lmia_down) "losing" else "gaining", " employer-sponsored workers. IRCC’s TFWP tables by occupation would show which B.C. occupations account for the ",
-               reg(41, "bc_lmia_ytd_change", "pct0", sprintf("Non-agricultural LMIA permits, B.C., %s", ytd_pair), "Figure C6"),
-               if (bc_lmia_down) " fall" else " rise", " in non-agricultural LMIA permits.")
 
-  # Data notes
+  # ---- Data notes (the Unknown IMP check is here) --------------------------------
   calc <- "Calculated from the IRCC files"
-  u1 <- reg(42, id$unk_share_ymax, "pct0", sprintf("Unknown IMP share of all permits, Canada, %d", YMAX), calc)
-  u2 <- reg(43, id$unk_share_cur, "pct0", sprintf("Unknown IMP share of all permits, Canada, %s", ys), calc)
-  dn1 <- paste0("A person can hold several permits, and a permit does not show employment. IRCC suppresses values of 0–5 (“--”, counted here as 0) and rounds others to the nearest 5; data are preliminary [1, 2]. “Unknown IMP” made up ",
-                u1, " of permits in ", YMAX,
-                if (ab_unk) paste0(", ", u2, " in ", YL(Y), " and ",
-                                   reg(44, "ab_unk_share_of_increase", "pct0", sprintf("Unknown IMP share of Alberta's %s increase", ys), calc),
+  unk_loc <- sprintf("Figure C3 (Unknown or other IMP; %s to %s)", N(ytdv("unk", "prev")), N(ytdv("unk", "cur")))
+  u1 <- reg(47, id$unk_share_ymax, "pct0", sprintf("Unknown IMP share of all permits, Canada, %d", YMAX), calc)
+  u2 <- reg(48, id$unk_share_cur, "pct0", sprintf("Unknown IMP share of all permits, Canada, %s", ys), calc)
+  dn1 <- paste0("A person can hold several permits, and a permit does not show employment. IRCC suppresses values of 0–5 (“--”, counted here as 0) and rounds others to the nearest 5; data are preliminary [1, 2]. Permits with no identified program (“Unknown IMP”) made up ",
+                u1, " of permits in ", YMAX, " and ", u2, " in ", YL(Y), ".",
+                if (ab_unk) paste0(" They supplied ", reg(49, "ab_unk_share_of_increase", "pct0", sprintf("Unknown IMP share of Alberta's %s increase", ys), calc),
                                    " of Alberta’s ", Y, " increase, so stream comparisons are approximate, especially for Alberta.") else
-                  paste0(" and ", u2, " in ", YL(Y), ", so stream comparisons are approximate."))
+                  " Stream comparisons are therefore approximate.",
+                if (pgwp_up && unk_up) paste0(" The PGWP rise is not a recoding out of Unknown IMP, which also rose, by ",
+                                              reg(50, "unk_ytd_increase", "k", sprintf("Unknown IMP increase, Canada, %s to %d", ysp, Y), unk_loc), ".") else
+                  if (pgwp_up) paste0(" Part of the PGWP rise may be a recoding: Unknown IMP fell by ",
+                                      reg(50, "unk_ytd_increase", "k", sprintf("Unknown IMP decrease, Canada, %s to %d", ysp, Y), unk_loc), ".") else "")
   # (c) The dated context line sits on the byline, so the two-page body keeps its layout.
   context_line <- if (context_release)
     sprintf("Numbers update with each IRCC release; context written for the release of %s", fmt_date(Q2_CONTEXT_RELEASE)) else
@@ -376,10 +400,11 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
               if (is.na(release_date)) "the data shown" else paste("release of", fmt_date(release_date)), fmt_date(Q2_CONTEXT_RELEASE))
   # Title rule: "Data Insight – <the note's date>" (en dash, no subtitle), the
   # same date as the byline: the date of Mohsen's text for the release it was
-  # written for, otherwise the build date.
+  # written for, otherwise the build date. The byline also names the data period.
   note_date <- if (context_release) Q2_NOTE_WRITTEN else fmt_date(build_date)
   title <- sprintf("Data Insight \u2013 %s", note_date)
-  byline <- paste("Mohsen Fazeli \u00b7", if (context_release) note_date else paste("updated", note_date), "\u00b7", context_line)
+  byline <- paste("Mohsen Fazeli \u00b7", if (context_release) note_date else paste("updated", note_date), "\u00b7 IRCC data to",
+                  fmt_month(P$latest), "\u00b7", context_line)
   rel_ref <- if (is.na(release_date)) "data shown" else paste("release of", fmt_date(release_date))
   refs_lines <- c(
     sprintf("[1] IRCC, TFWP work permit holders, %s.", rel_ref), sprintf("[2] IRCC, IMP work permit holders, %s.", rel_ref),
@@ -394,20 +419,17 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
     "[11] IRCC, PGWP Program and labour market impact, November 2024.",
     "[12] Statistics Canada, Canada’s population estimates, The Daily, September 23, 2026.",
     "[13] M. Fazeli, Temporary Workers in Canada dashboard, October 2026.")
-  paras <- c(title, byline, "Summary",
-             "This note uses Immigration, Refugees and Citizenship Canada (IRCC) work permit data [1, 2], analysed in the accompanying dashboard [13], to inform B.C. labour market and skills planning, including the B.C. Labour Market Outlook [3].",
-             s_b1, s_b2, s_b3, s_b4, for_bc, "Background",
-             "The TFWP lets employers hire foreign workers, usually after a Labour Market Impact Assessment (LMIA) shows no Canadian is available; this note calls these permits employer-sponsored. The International Mobility Program (IMP) needs no LMIA; it covers PGWPs for graduates of Canadian institutions [11], spouses and youth exchanges.",
-             bg2, "Findings", h1, f1, f2,
-             "[FIGURE 1: annual stacked bars, TFWP and IMP, same months each year]",
-             if (P$M == 12) "Figure 1. Permits that took effect, by year, Canada." else sprintf("Figure 1. Permits that took effect, %s of each year, Canada.", YL()),
+  paras <- c(title, byline, "Summary", bl, s_b1, s_b2, s_b3, s_b4, "Background", bg1, bg2,
+             "Findings", h1, f1, f2,
+             "[FIGURE 1: annual stacked bars, TFWP and IMP, same months each year]", fig1_cap,
              h2, f3, f4, h3, f5,
+             "[TABLE 1]", t1_cap, t1_head, t1_rows,
              "[FIGURE 2: horizontal bars, each province’s share of Canada’s increase, B.C. highlighted]", fig2_cap,
              f6, "Implications and next steps for B.C.", i1, i2, i3, "Data notes", dn1, "References", refs_lines)
   nums <- do.call(rbind, rows)
   nums <- nums[order(nums$order), ]
-  # every registered phrase must be in the text (a number that a fallback dropped is not registered)
-  flat <- paste(paras, collapse = " ")
+  # every registered phrase must be in the text (table rows without their "|"; "−" read as "-")
+  flat <- paste(ifelse(startsWith(paras, "|"), gsub(" *\\| *", " ", paras), paras), collapse = " ")
   miss <- nums$phrase[!vapply(nums$phrase, function(p) grepl(p, flat, fixed = TRUE), logical(1))]
   if (length(miss)) stop("Numbers registered but not in the text: ", paste(miss, collapse = "; "))
   list(paras = paras, nums = nums, rules = do.call(rbind, unname(rules)),

@@ -1,7 +1,8 @@
 """build_note.py: the Question 2 note as a Word file, for the dashboard's Downloads tab.
 
 Same layout code as the note's own builder (q2 word/build_r2_docx.py, the version
-that made Mohsen_2.docx on October 19-20, 2026), but every piece of text that
+that made Mohsen_2.docx; October 21, 2026: Table 1, takeaway captions with the
+tab in small grey text, one bullet style), but every piece of text that
 depends on the data (body text, captions, appendix lines, tables) is read from
 a JSON spec written by exports/R/note_q2.R. No AI is used.
 Usage:  python3 build_note.py spec.json
@@ -11,7 +12,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from docx.shared import Pt, Inches
 from docx.oxml.ns import qn
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx_helpers import (new_document, footer, rich, rule, add_hyperlink, table)
+from docx_helpers import (new_document, footer, rich, rule, add_hyperlink, table, GREY)
 
 S = json.load(open(sys.argv[1], encoding="utf-8"))
 FIGDIR = S["figures_dir"]
@@ -53,7 +54,12 @@ def bullet(text):
     return p
 
 
-def picture(path, label, text, width=6.6):
+def small_grey(par, text):
+    r = par.add_run(F(text)); r.bold = False; r.font.size = Pt(7.5); r.font.color.rgb = GREY
+    return r
+
+
+def picture(path, label, text, width=6.6, note=None):
     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before = Pt(2); p.paragraph_format.space_after = Pt(0)
     p.paragraph_format.keep_with_next = True
@@ -61,6 +67,8 @@ def picture(path, label, text, width=6.6):
     c = doc.add_paragraph(style="Caption")
     r = c.add_run(label + ". "); r.bold = True
     rich(c, F(text))
+    if note:
+        small_grey(c, " " + note)
     c.paragraph_format.space_before = Pt(1); c.paragraph_format.space_after = Pt(3)
 
 
@@ -91,8 +99,19 @@ while i < len(paras):
         num = re.match(r"\[FIGURE (\d+)", t).group(1)
         cap = paras[i + 1]; assert cap.startswith(f"Figure {num}. "), cap
         path, width, dash = FIG[num]
-        picture(path, f"Figure {num}", cap[len(f"Figure {num}. "):] + " " + dash, width)
+        picture(path, f"Figure {num}", cap[len(f"Figure {num}. "):], width, note=dash)
         i += 1
+    elif t.startswith("[TABLE"):
+        num = re.match(r"\[TABLE (\d+)", t).group(1)
+        cap = paras[i + 1]; assert cap.startswith(f"Table {num}. "), cap
+        c = doc.add_paragraph(style="Caption"); c.paragraph_format.space_before = Pt(3); c.paragraph_format.space_after = Pt(1)
+        r = c.add_run(f"Table {num}. "); r.bold = True
+        rich(c, cap[len(f"Table {num}. "):])
+        j = i + 2; rows_ = []
+        while j < len(paras) and paras[j].startswith("|"):
+            rows_.append([x.strip() for x in paras[j].strip("|").split("|")]); j += 1
+        table(doc, rows_[0], rows_[1:], [2.15, 0.7, 0.7, 0.8, 0.9, 0.9, 0.95], font_pt=8.5)
+        i = j - 1
     elif section == "References":
         m = re.match(r"\[(\d+)\] ([^,]+), (.+?)(, .*|\.)$", t)
         n_, author, ttl, rest = m.groups()
@@ -102,25 +121,19 @@ while i < len(paras):
         b = t[2:]
         lead, _, restt = b.partition(". ")
         txt = f"**{lead}.** " + styled(restt)
+        p = doc.add_paragraph(style="List Bullet"); rich(p, txt)      # one bullet style throughout
         if section == "Summary":
-            p = doc.add_paragraph()
-            p.paragraph_format.left_indent = Inches(0.3); p.paragraph_format.first_line_indent = Inches(-0.15)
-            p.add_run("•  "); rich(p, txt); p.paragraph_format.space_after = Pt(1.5)
-        else:
-            p = doc.add_paragraph(style="List Bullet"); rich(p, txt)
+            p.paragraph_format.space_after = Pt(1.5)
     elif section == "Findings" and not t.endswith((".", "]", ")")):
         doc.add_paragraph(t, style="Heading 2")
-    elif t.startswith("For B.C.:"):
-        p = doc.add_paragraph(); rich(p, "**For B.C.:**" + styled(t[len("For B.C.:"):]))
-        p.paragraph_format.space_after = Pt(3)
     else:
         p = doc.add_paragraph(); rich(p, styled(t))
     i += 1
 
 nums = list(csv.DictReader(open(S["nums_csv"], encoding="utf-8")))
-flat_text = " ".join(paras)
+flat_text = " ".join(" ".join(x.strip() for x in l.strip("|").split("|")) if l.startswith("|") else l for l in paras).replace("\u2212", "-")
 for r in nums:
-    assert r["phrase"] in flat_text, "phrase not in the text: " + r["phrase"]
+    assert r["phrase"].replace("\u2212", "-") in flat_text, "phrase not in the text: " + r["phrase"]
     if r["fact_id"] in facts and r["fact_id"] not in used:
         used.append(r["fact_id"])
 
@@ -187,6 +200,8 @@ def exact(r):
         return s + (" (\u00d7" + f"{1 + v:.2f})" if r["rule"] == "tripled" else "")
     if f["type"] == "share":
         return f"{v * 100:.1f}%"
+    if f["type"] == "difference" and re.search(r"_ytd\d\d$", k):   # a level (all permits minus PGWPs), not a change
+        return f"{v:,.0f}"
     if f["type"] == "difference":
         return ("+" if v >= 0 else MINUS) + f"{abs(v):,.0f}"
     return f"{v:,.0f}"

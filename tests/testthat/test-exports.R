@@ -1,8 +1,8 @@
 # Downloads tab: the PDFs built by tools/build_exports.R.
 #  1. On the September 15, 2026 release the note equals the submitted note
-#     (Mohsen_2): text, the 44 rounded body numbers and their exact values
+#     (Mohsen_2, revised Oct 21, 2026): text, the 64 rounded body numbers and their exact values
 #     (Appendix D), tables and appendix lines; the dated context line on the
-#     byline and the figure date are the only differences.
+#     byline and the figures' capture date are the only differences.
 #  2. On simulated newer releases (copies of the data with changed numbers;
 #     test data only) the wording rules switch, the title carries the build date, and no
 #     stale period ("July 2026", "Jan–Jul") is left.
@@ -69,10 +69,10 @@ test_that("the body is Mohsen's text plus the dated context line on the byline",
   expect_false(tx$rules$holds[tx$rules$rule == "new_12_month_high"])
 })
 
-test_that("all 44 body numbers and Appendix D rows equal the note's", {
+test_that("all 64 body numbers and Appendix D rows equal the note's", {
   fx <- q2_facts(SEP15); tx <- q2_note_text(fx, SEP15)
   bn <- read_fix("body_numbers.csv")
-  expect_equal(nrow(tx$nums), 44L)
+  expect_equal(nrow(tx$nums), 64L)
   for (col in c("shown", "fact_id", "rule", "statement", "location")) expect_identical(tx$nums[[col]], bn[[col]], label = col)
   # every rounded number equals its exact fact rounded (validate_q2.R rules)
   for (i in seq_len(nrow(bn))) if (bn$rule[i] %in% c("pct0", "k", "h", "M2"))
@@ -85,13 +85,14 @@ test_that("appendix lines, captions and table headers equal the note's (two date
   O <- r$original; S <- r$spec
   A0 <- unlist(O$appendix_a); A1 <- unlist(S$appendix_a)
   expect_identical(which(A0 != A1), 8L)                       # the figures' date only
-  expect_identical(A1[8], sub("October 19, 2026", "October 20, 2026", A0[8], fixed = TRUE))
+  expect_identical(A1[8], sub("(plain-language version, October 19, 2026)",
+                              "(plain-language version; figures captured on October 20, 2026, when this file was built)", A0[8], fixed = TRUE))
   for (k in 1:8) expect_identical(S$appendix_c[[k]][[3]], O$appendix_c[[k]][[3]])
   for (k in c("1", "2")) expect_identical(S$fig[[k]][[3]], O$fig[[k]][[3]])
   expect_identical(as.character(S$table_c1_headers), unlist(O$headers_c1))
   expect_identical(c(S$table_c1_caption, S$table_c2_caption, S$appendix_d_intro), unlist(O$P_calls))
   E0 <- unlist(O$appendix_e); E1 <- unlist(S$appendix_e)
-  expect_identical(which(E0 != E1), 2L)                       # "(commit 3c6cae6)" -> the figures' version
+  expect_identical(which(E0 != E1), 2L)                       # "(commit 7d2fad4)" -> the figures' version (build date)
   expect_identical(unlist(O$appendix_b), unlist(S$appendix_b))
   refs0 <- utils::read.csv(file.path(EXPORTS, "q2", "references_template.csv"), colClasses = "character", encoding = "UTF-8")
   refs1 <- utils::read.csv(file.path(tempdir(), "q2_sep15", "refs.csv"), colClasses = "character", encoding = "UTF-8")
@@ -115,7 +116,7 @@ test_that("a newer release (one more month, same story) updates every period", {
                      S$table_c1_headers, unlist(S$appendix_e), tx$nums$statement, tx$nums$location), collapse = "\n")
   for (s in stale) expect_false(grepl(s, all_txt, fixed = TRUE), label = s)
   expect_true(grepl("January\u2013August 2026", all_txt, fixed = TRUE))
-  expect_match(tx$paras[2], "updated October 20, 2026 \u00b7 Numbers: release of October 15, 2026; context written for the release of September 15, 2026", fixed = TRUE)
+  expect_match(tx$paras[2], "updated October 20, 2026 \u00b7 IRCC data to August 2026 \u00b7 Numbers: release of October 15, 2026; context written for the release of September 15, 2026", fixed = TRUE)
   expect_match(tx$paras[grep("^\\[1\\]", tx$paras)], "release of October 15, 2026", fixed = TRUE)
   expect_false(any(grepl("\\{[a-z0-9_]+\\}", tx$paras)))
   shown <- tx$nums$shown[nzchar(tx$nums$shown)]
@@ -135,10 +136,12 @@ test_that("when the story changes, the wording rules switch and the title carrie
   expect_identical(tx$paras[1], "Data Insight \u2013 October 20, 2026")
   txt <- paste(tx$paras, collapse = "\n")
   for (s in c("climbing again", "Graduates drive", "rebound is small", "All of B.C.’s growth", "For B.C.:",
-              "The rise is real", "may now be graduating", "despite rising permits", stale))
+              "The rise is real", "may now be graduating", "despite rising permits", "more than all of B.C.’s growth",
+              "grew only through graduates", "led by graduates", "highest January", "likely because new PGWPs", stale))
     expect_false(grepl(s, txt, fixed = TRUE), label = s)
   expect_match(txt, "Permits are falling.", fixed = TRUE)
-  expect_match(txt, "fewer than a year earlier", fixed = TRUE)
+  expect_match(txt, "fewer than in the same months of 2025", fixed = TRUE)
+  expect_match(txt, "Table 1. Permits issued, B.C. and Canada, Jan\u2013Aug 2025 and Jan\u2013Aug 2026.", fixed = TRUE)
   shown <- tx$nums$shown[nzchar(tx$nums$shown)]
   expect_setequal(setdiff(body_number_tokens(tx$paras), shown), character())
 })
@@ -211,17 +214,27 @@ test_that("the built files match the release, the manifest and the submitted not
   expect_identical(vapply(m$files, `[[`, "", "file"),
                    c("work-permits-canada-bc-note.pdf", "how-to-use-this-dashboard.pdf", "about-the-package-and-files.pdf"))
   for (x in m$files) expect_identical(pdftools::pdf_info(file.path(dir, x$file))$pages, as.integer(x$pages))
-  expect_identical(as.integer(m$files[[1]]$pages), 10L); expect_identical(as.integer(m$files[[1]]$body_pages), 2L)
+  expect_identical(as.integer(m$files[[1]]$pages), 11L); expect_identical(as.integer(m$files[[1]]$body_pages), 2L)
   expect_identical(as.integer(m$files[[2]]$pages), 2L)
-  # the note's text equals Mohsen_2.pdf apart from the byline's context line and the two figure dates
+  # the note's text equals Mohsen_2.pdf apart from the byline's context line and the two figure dates.
+  # Compared as one running text (page footers removed), because the longer byline reflows lines.
   system2("pdftotext", c("-layout", shQuote(file.path(dir, m$files[[1]]$file)), shQuote(f <- tempfile(fileext = ".txt"))))
   new <- readLines(f, encoding = "UTF-8", warn = FALSE); old <- readLines(file.path(FIX, "mohsen_2_pdf.txt"), encoding = "UTF-8", warn = FALSE)
-  norm <- function(x) { x <- gsub("\\s+", " ", trimws(x)); x[nzchar(x)] }
-  dn <- setdiff(norm(new), norm(old)); do <- setdiff(norm(old), norm(new))
-  allowed <- "Numbers update with each IRCC release|plain-language version, October|unchanged copy of the dashboard \\(|headless browser, sets the filters|^Mohsen Fazeli \u00b7 October 19, 2026$"
-  expect_true(all(grepl(allowed, c(dn, do))),
-              info = paste(c(dn, do), collapse = "\n"))
-  expect_lte(length(dn), 4)
+  joined <- function(x) gsub("\\s+", " ", paste(trimws(x), collapse = " "))
+  dt <- "[A-Z][a-z]+ [0-9]{1,2}, [0-9]{4}"
+  canon <- function(s) {
+    s <- gsub(paste0(" \u00b7 Numbers update with each IRCC release; context written for the release of ", dt), "", s)
+    s <- gsub(paste0("\\(plain-language version(;|,) (figures captured on )?", dt, "(, when this file was built)?\\)"), "(VERSION)", s)
+    s <- gsub(paste0("\\((commit [0-9a-f]{7}|the version of ", dt, ", when this file was built)\\)"), "(DASHVER)", s)
+    s <- gsub("Mohsen Fazeli \u00b7 Work permit insights for B.C. \u00b7 page [0-9]+", "", s)
+    gsub("\\s+", " ", s)
+  }
+  jn <- joined(new); jo <- joined(old)
+  expect_match(jn, "Numbers update with each IRCC release; context written for the release of September 15, 2026", fixed = TRUE)
+  expect_match(jn, "figures captured on", fixed = TRUE)
+  cc <- canon(c(jn, jo))
+  expect_identical(lengths(regmatches(cc, gregexpr("\\((VERSION|DASHVER)\\)", cc))), c(2L, 2L))
+  expect_identical(canon(jn), canon(jo))
 })
 
 test_that("the running app has a Downloads tab before Help, and its PDFs download", {
@@ -235,7 +248,7 @@ test_that("the running app has a Downloads tab before Help, and its PDFs downloa
   expect_identical(tail(tabs, 2), c("Downloads", "Help"))
   app$set_inputs(nav = "Downloads")
   txt <- app$get_text("#downloads-panel")
-  expect_match(txt, "PDF, 10 pages, built for the IRCC release of September 15, 2026", fixed = TRUE)
+  expect_match(txt, "PDF, 11 pages, built for the IRCC release of September 15, 2026", fixed = TRUE)
   expect_match(txt, "written for the IRCC release of September 15, 2026", fixed = TRUE)
   expect_false(grepl("earlier version of the data", txt, fixed = TRUE))
   hrefs <- unlist(app$get_js("Array.from(document.querySelectorAll('#downloads-panel a[href^=\"exports/\"]')).map(function(a){return a.getAttribute('href');})"))
