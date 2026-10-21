@@ -19,13 +19,13 @@ v <- params$v
 
 <style>@page { margin: 1.4cm 1.8cm; }</style>
 
-<div class="link-box">**Start here (Windows, nothing to install):** unzip the offline Windows package and double-click `run_dashboard.bat` in the folder `temporary-workers-dashboard`. Other systems: steps below.</div>
+<div class="link-box">**Start here (Windows, nothing to install):** download and unzip the offline Windows package (below), then double-click `run_dashboard.bat`. Other systems: steps below.</div>
 
 The package holds the dashboard's code, the processed data and the package list. All numbers come only from the two IRCC CSV files, from the IRCC dataset [Temporary Residents: TFWP and IMP Work Permit Holders – Monthly IRCC Updates](https://open.canada.ca/data/en/dataset/360024f2-17e9-4558-bfc1-3616485d65b9) (Open Government Licence – Canada); other official sources are used only for the policy-event notes and the note on permits and arrivals. The raw IRCC files are not included; the rebuild step downloads them itself.
 
 # Run it on your own computer
 
-**Windows, nothing to install.** The offline Windows package (`Mohsen_1B2_offline_windows.zip`, about 200 MB) adds R `r v$r_version` for Windows (folder `R-portable/`, the official CRAN build) and every R package the dashboard needs (`library/`, the versions in `renv.lock`). Unzip it (right-click > *Extract All*), open `temporary-workers-dashboard` and double-click `run_dashboard.bat`: the dashboard opens in your browser; close the black window to stop it. Nothing is installed, no internet is needed, and any R already on the computer is neither used nor changed.
+**Windows, nothing to install.** The offline Windows package (`Mohsen_1B2_offline_windows.zip`, about 200 MB: [github.com/Mohsenfazeli/temporary-workers-dashboard/releases/tag/v1.0-offline-windows](https://github.com/Mohsenfazeli/temporary-workers-dashboard/releases/tag/v1.0-offline-windows)) adds R `r v$r_version` for Windows (folder `R-portable/`, the official CRAN build) and every R package the dashboard needs (`library/`, the versions in `renv.lock`). Unzip it, open `temporary-workers-dashboard` and double-click `run_dashboard.bat`: the dashboard opens in your browser. Nothing is installed, and any R already on the computer is not used.
 
 **Any computer with R** (Windows, macOS or Linux; the smaller package `Mohsen_1B2.zip`):
 

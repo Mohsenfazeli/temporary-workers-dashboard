@@ -52,7 +52,7 @@ How many work permits were issued in Canada, where (each province and territory)
 
 # Run it on your own computer
 
-The dashboard also runs offline on your own computer. On Windows, the offline package includes R and every R package: unzip it and double-click `run_dashboard.bat`, with nothing to install. With R on any system, the smaller code package needs a one-time `renv::restore()`. *About the package and files* (on the *Downloads* tab) gives the steps and lists what the package holds.
+The dashboard also runs offline on your own computer. On Windows, the offline package ([github.com/Mohsenfazeli/temporary-workers-dashboard/releases/tag/v1.0-offline-windows](https://github.com/Mohsenfazeli/temporary-workers-dashboard/releases/tag/v1.0-offline-windows)) includes R and every R package: download and unzip it and double-click `run_dashboard.bat`, with nothing to install. With R on any system, the smaller code package needs a one-time `renv::restore()`. *About the package and files* (on the *Downloads* tab) gives the steps and lists what the package holds.
 
 # Data sources
 
