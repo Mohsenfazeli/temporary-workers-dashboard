@@ -121,13 +121,13 @@ Appendix A. Method and assumptions
  TFWP and IMP do not overlap, so "both programs" = TFWP + IMP. IRCC's IMP table covers only a subset of IMP
    permit holders: it leaves out people in Canada mainly for other reasons, such as asylum claimants.
  Figures are pictures of the Temporary Workers dashboard's own charts [13] (plain-language version, October 19,
-   2026), with its card titles and source lines, taken from the dashboard in its default setting (the release above). The
-   caption under each states its takeaway and names the tab; the filters are: Figure 1 (Overview tab): Canada, both
-   programs, Annual view, show only Jan–Jul of each year, Jan 2015 to Jul 2026; Figure 2 (Geography tab): British
-   Columbia (highlighted), both programs, period ending July 2026. Some numbers have no chart in the dashboard
-   (Unknown IMP as a share of all permits and of Alberta's increase, permits other than PGWPs in Table 1, and the
-   robustness check below); they are calculated from the same two IRCC files (Appendix D). Figure 1's axis labels each
-   bar "(Jan–Jul)", as the dashboard does when only January–July is shown.
+   2026; Figure 1 October 21, 2026), with its card titles and source lines, taken from the dashboard in its default
+   setting (the release above). The caption under each states its takeaway and names the tab; the filters are: Figure 1
+   (Overview tab): Canada, both programs, Annual view, show only Jan–Jul of each year, Jan 2015 to Jul 2026; Figure 2
+   (Geography tab): British Columbia (highlighted), both programs, period ending July 2026. Some numbers have no
+   chart in the dashboard (Unknown IMP as a share of all permits and of Alberta's increase, permits other than PGWPs
+   in Table 1, and the robustness check below); they are calculated from the same two IRCC files (Appendix D). Figure
+   1's bars are labelled with plain years; each covers January–July of that year, as the chart title says.
  Streams are grouped from IRCC's program levels as in the dashboard (mapping in the dashboard's About the data
    tab; IRCC's own program names per group are on the Composition tab). "Non-farm (employer-sponsored) permits"
    = IRCC's "Other Temporary Foreign Workers with LMIA" (dashboard: "Other TFWP workers with an LMIA"). "Farm
@@ -371,9 +371,9 @@ Appendix E. Reproducing the analysis
  analysis_q2.R opens the dashboard's data (IRCC open data release of September 15, 2026 (data to July 2026): the
    two CSV files, saved in ../q1/data/baseline.rds; no live download) with the dashboard's code (../q1/R/data.R,
    ../q1/R/calc.R), computes every number, and writes facts_q2.csv and the tables.
- dashboard/Mohsen_2_dashboard_shots.R starts an unchanged copy of the dashboard (commit 7d2fad4) in a
-   headless browser, sets the filters named under each figure and saves the dashboard card as a picture
-   (tables/figure_register.csv lists each figure's card title and filters).
+ dashboard/Mohsen_2_dashboard_shots.R starts an unchanged copy of the dashboard (commit 7d2fad4; Figure 1
+   commit 5cc71ef) in a headless browser, sets the filters named under each figure and saves the dashboard card as a
+   picture (tables/figure_register.csv lists each figure's card title and filters).
  word/build_r2_docx.py builds this Word document (Mohsen_2.docx) from Mohsen's text (word/mohsen_text.md,
    used verbatim); tables/body_numbers.csv links each rounded number in it to facts_q2.csv. LibreOffice converts the
    document to Mohsen_2.pdf.

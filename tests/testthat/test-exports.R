@@ -85,14 +85,14 @@ test_that("appendix lines, captions and table headers equal the note's (two date
   O <- r$original; S <- r$spec
   A0 <- unlist(O$appendix_a); A1 <- unlist(S$appendix_a)
   expect_identical(which(A0 != A1), 8L)                       # the figures' date only
-  expect_identical(A1[8], sub("(plain-language version, October 19, 2026)",
+  expect_identical(A1[8], sub("(plain-language version, October 19, 2026; Figure 1 October 21, 2026)",
                               "(plain-language version; figures captured on October 20, 2026, when this file was built)", A0[8], fixed = TRUE))
   for (k in 1:8) expect_identical(S$appendix_c[[k]][[3]], O$appendix_c[[k]][[3]])
   for (k in c("1", "2")) expect_identical(S$fig[[k]][[3]], O$fig[[k]][[3]])
   expect_identical(as.character(S$table_c1_headers), unlist(O$headers_c1))
   expect_identical(c(S$table_c1_caption, S$table_c2_caption, S$appendix_d_intro), unlist(O$P_calls))
   E0 <- unlist(O$appendix_e); E1 <- unlist(S$appendix_e)
-  expect_identical(which(E0 != E1), 2L)                       # "(commit 7d2fad4)" -> the figures' version (build date)
+  expect_identical(which(E0 != E1), 2L)                       # "(commit 7d2fad4; Figure 1 commit 5cc71ef)" -> the figures' version (build date)
   expect_identical(unlist(O$appendix_b), unlist(S$appendix_b))
   refs0 <- utils::read.csv(file.path(EXPORTS, "q2", "references_template.csv"), colClasses = "character", encoding = "UTF-8")
   refs1 <- utils::read.csv(file.path(tempdir(), "q2_sep15", "refs.csv"), colClasses = "character", encoding = "UTF-8")
@@ -224,8 +224,8 @@ test_that("the built files match the release, the manifest and the submitted not
   dt <- "[A-Z][a-z]+ [0-9]{1,2}, [0-9]{4}"
   canon <- function(s) {
     s <- gsub(paste0(" \u00b7 Numbers update with each IRCC release; context written for the release of ", dt), "", s)
-    s <- gsub(paste0("\\(plain-language version(;|,) (figures captured on )?", dt, "(, when this file was built)?\\)"), "(VERSION)", s)
-    s <- gsub(paste0("\\((commit [0-9a-f]{7}|the version of ", dt, ", when this file was built)\\)"), "(DASHVER)", s)
+    s <- gsub(paste0("\\(plain-language version(;|,) (figures captured on )?", dt, "(; Figure 1 ", dt, ")?(, when this file was built)?\\)"), "(VERSION)", s)
+    s <- gsub(paste0("\\((commit [0-9a-f]{7}(; Figure 1 commit [0-9a-f]{7})?|the version of ", dt, ", when this file was built)\\)"), "(DASHVER)", s)
     s <- gsub("Mohsen Fazeli \u00b7 Work permit insights for B.C. \u00b7 page [0-9]+", "", s)
     gsub("\\s+", " ", s)
   }

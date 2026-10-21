@@ -59,11 +59,11 @@ q2_write_inputs <- function(bundle, out_dir, figures_dir, build_date = Sys.Date(
                          if (R$same) sprintf("show only Jan\u2013%s of each year, ", P$mon) else "", rng(R$full), fmt_month(P$latest))
   i <- at("**Figures**")
   # The figures are captured when this file is built: that date is named as such, so it is not read as the note's date.
-  A[i] <- q2_replace_once(A[i], "(plain-language version, October 19, 2026)",
+  A[i] <- q2_replace_once(A[i], "(plain-language version, October 19, 2026; Figure 1 October 21, 2026)",
                           sprintf("(plain-language version; figures captured on %s, when this file was built)", bdate))
   A[i] <- q2_replace_once(A[i], O$fig_filters[[1]], fig_filters)
-  A[i] <- q2_replace_once(A[i], "Figure 1's axis labels each bar \"(Jan\u2013Jul)\", as the dashboard does when only January\u2013July is shown.",
-                          if (R$same) sprintf("Figure 1's axis labels each bar \"(Jan\u2013%s)\", as the dashboard does when only %s is shown.", P$mon, YL()) else "")
+  A[i] <- q2_replace_once(A[i], "Figure 1's bars are labelled with plain years; each covers January\u2013July of that year, as the chart title says.",
+                          if (R$same) sprintf("Figure 1's bars are labelled with plain years; each covers %s of that year, as the chart title says.", YL()) else "")
   A[i] <- sub(" +$", "", A[i])
   A[at("**One time frame:**")] <- sprintf(paste0("**One time frame:** the body compares %s with %s of earlier years (and full calendar ",
                                                  "years up to %d); \"highest %s in the data\" means above %s of every year from %d to %d."),
@@ -116,7 +116,7 @@ q2_write_inputs <- function(bundle, out_dir, figures_dir, build_date = Sys.Date(
               `2` = list(q2_fig_files[["f2"]], as.numeric(O$fig$`2`[[2]]), O$fig$`2`[[3]]))
   E <- unlist(O$appendix_e)
   E[1] <- q2_replace_once(E[1], "IRCC open data release of September 15, 2026 (data to July 2026)", phrase)
-  E[2] <- q2_replace_once(E[2], "(commit 7d2fad4)", sprintf("(the version of %s, when this file was built)", bdate))
+  E[2] <- q2_replace_once(E[2], "(commit 7d2fad4; Figure 1 commit 5cc71ef)", sprintf("(the version of %s, when this file was built)", bdate))
 
   # References: the release, retrieval date and dashboard title follow the data
   refs <- utils::read.csv(file.path(exports_dir, "q2", "references_template.csv"), stringsAsFactors = FALSE,
