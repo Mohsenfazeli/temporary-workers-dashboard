@@ -243,7 +243,10 @@ test_that("chart titles name what is shown and follow the filters", {
                paste0("Share of IMP work permits issued by category (Unknown IMP left out), Canada, ", per))
   # Filters: province, one program, same months, monthly view, one part year
   s2 <- utils::modifyList(s, list(geography = "Ontario", program_choice = "TFWP", last_moy = 7L))
-  expect_equal(chart_title("headline", s2), sprintf("TFWP work permits issued, Ontario, Jan\u2013Jul of each year, 2015 to %s", yr))
+  # The Overview headline chart labels its bars with plain years in this view, so its title names the months in full
+  expect_equal(chart_title("headline", s2), sprintf("TFWP work permits issued, Ontario, January\u2013July of each year, 2015 to %s", yr))
+  expect_equal(same_months_period_long(as.Date("2026-01-01"), as.Date("2026-07-01"), 7L), "January\u2013July 2026")
+  expect_equal(same_months_period_long(as.Date("2015-01-01"), as.Date("2026-01-01"), 1L), "January of each year, 2015 to 2026")
   expect_equal(chart_title("yoy", s2), sprintf("Change from a year earlier in TFWP work permits issued, Ontario, Jan\u2013Jul of each year, 2015 to %s", yr))
   expect_match(chart_title("compare", utils::modifyList(s2, list(last_moy = NULL))),
                "^Change from a year earlier in work permits issued, Ontario and Canada, TFWP, 2015 to ")

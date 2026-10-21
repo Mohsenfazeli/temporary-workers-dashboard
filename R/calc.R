@@ -696,6 +696,15 @@ period_text <- function(start, end, resolution = "Annual", last_moy = NULL) {
   else paste0(parts[1], ", ", parts[2], " and ", parts[3])
 }
 
+#' The same-months period with full month names, for the Overview headline
+#' chart, whose bars are labelled with plain years in this view:
+#'   "January\u2013July of each year, 2015 to 2026" (or "January 2026" for one year).
+same_months_period_long <- function(start, end, last_moy) {
+  sy <- as.integer(format(as.Date(start), "%Y")); ey <- as.integer(format(as.Date(end), "%Y"))
+  mtx <- if (last_moy == 1) "January" else paste0("January\u2013", month.name[last_moy])
+  if (sy == ey) paste(mtx, sy) else sprintf("%s of each year, %d to %d", mtx, sy, ey)
+}
+
 #' Change-from-a-year-earlier charts start one year after the data do (the
 #' first year has nothing to compare with), so their titles start there too.
 #' Returns the selection with `start` moved to that month when needed.
@@ -718,8 +727,11 @@ chart_title <- function(kind, s, prog = NULL, as_number = TRUE, known_only = FAL
   rng <- range_text(s$start, s$end)
   permits <- if (both) "Work permits issued" else paste(s$program_choice, "work permits issued")
   switch(kind,
-    headline = if (both) sprintf("Work permits issued by program, %s, %s", geo, per)
-               else sprintf("%s, %s, %s", permits, geo, per),
+    # Same months each year: the bars carry plain years, so the title names
+    # the months in full, e.g. "January\u2013July of each year, 2015 to 2026".
+    headline = { if (identical(s$resolution, "Annual") && !is.null(s$last_moy)) per <- same_months_period_long(s$start, s$end, s$last_moy)
+                 if (both) sprintf("Work permits issued by program, %s, %s", geo, per)
+                 else sprintf("%s, %s, %s", permits, geo, per) },
     trend    = if (both) sprintf("Work permits issued, both programs and each program, %s, %s", geo, per)
                else sprintf("%s, %s, %s", permits, geo, per),
     yoy      = if (both) sprintf("Change from a year earlier in work permits issued, by program, %s, %s", geo, per)

@@ -140,7 +140,12 @@ test_that("the app opens on the frozen release by default, with the right cards 
   expect_equal(app$get_value(output = "overview-kpi_ytd"), "673,280")          # the end month is unchanged
   app$click("qp_full"); app$wait_for_idle(800)
   app$set_inputs(same_months = TRUE); app$wait_for_idle(800)
-  expect_match(app$get_value(output = "overview-headline_title"), "Jan\u2013Jul of each year, 2015 to 2026", fixed = TRUE)
+  expect_identical(app$get_value(output = "overview-headline_title"),
+                   "Work permits issued by program, Canada, January\u2013July of each year, 2015 to 2026")
+  # Plain years on the axis, unrotated (every bar is January-July, as the title says)
+  pj <- jsonlite::fromJSON(app$get_value(output = "overview-headline_plot"), simplifyVector = FALSE)$x
+  expect_identical(unique(unlist(lapply(pj$data, function(tr) unlist(tr$x)))), as.character(2015:2026))
+  expect_identical(as.numeric(pj$layout$xaxis$tickangle), 0)
   expect_no_match(app$get_value(output = "overview-headline_title"), "shown separately")
 })
 

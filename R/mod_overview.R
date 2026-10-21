@@ -94,14 +94,20 @@ overview_server <- function(id, sel, data, meta) {
         style_plot(p, "Month issued", "Work permits issued per month") |>
           plotly::layout(xaxis = list(tickformat = "%Y", dtick = "M12"))
       } else {
+        # Same months each year: every bar covers the months named in the
+        # title, so the axis shows plain years, unrotated.
+        same <- !is.null(s$last_moy)
+        if (same) ser$label <- format(ser$period, "%Y")
         ser$label <- factor(ser$label, levels = unique(ser$label[order(ser$period)]))
         p <- plotly::plot_ly(ser, x = ~label, y = ~value, color = ~program,
                              colors = PROGRAM_COLOURS[c("TFWP", "IMP")], type = "bar",
                              text = ~hover, hoverinfo = "text", textposition = "none",
                              marker = list(opacity = ifelse(ser$partial, 0.55, 1)))
-        style_plot(p, "Year issued",
-                   "Work permits issued per year", x_type = "category") |>
+        p <- style_plot(p, "Year issued",
+                        "Work permits issued per year", x_type = "category") |>
           plotly::layout(barmode = "stack")
+        if (same) p <- plotly::layout(p, xaxis = list(tickangle = 0))
+        p
       }
     })
     output$headline_source <- shiny::renderUI({
