@@ -29,10 +29,11 @@ LOCAL_CORE <- c(TFWP = file.path(TESTDATA, "ODP-TR-Work-TFWP-PT_program.csv"),
                 IMP  = file.path(TESTDATA, "ODP-TR-Work-IMP-PT_program.csv"))
 have_testdata <- all(file.exists(LOCAL_CORE))
 
-# A temporary copy of the cache, so tests never overwrite data/cache.rds.
+# A temporary RDS path for tests that may write a cache; seed from baseline so
+# tests never need (or overwrite) a committed data/cache.rds.
 temp_cache <- function() {
   f <- tempfile(fileext = ".rds")
-  file.copy(file.path(PROJECT, "data", "cache.rds"), f)
+  file.copy(file.path(PROJECT, "data", "baseline.rds"), f)
   f
 }
 

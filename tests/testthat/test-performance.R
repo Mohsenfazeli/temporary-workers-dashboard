@@ -1,10 +1,11 @@
-# Performance targets from the brief: the app is ready in under 10 seconds and
-# a filter change updates in under 1 second.
+# Performance targets: the app is ready in under 10 seconds and a filter change
+# updates in under 1 second.
 # What is measured, and why:
 #  - Start-up is timed from the saved copy bundled with the app
-#    (data/cache.rds), so the number reflects the app itself, not the network.
-#    A live start also downloads about 17 MB from IRCC, so its time depends on
-#    the connection; test-live.R times that download separately.
+#    (data/baseline.rds via the live-read fallback), so the number reflects the
+#    app itself, not the network. A live start also downloads about 17 MB from
+#    IRCC, so its time depends on the connection; test-live.R times that
+#    download separately.
 #  - Filter speed uses the MEDIAN of 16 changes (a typical change), with a
 #    looser guard on the slowest one, because a single slow change can come
 #    from the browser or the computer being busy rather than from the app.
@@ -14,8 +15,8 @@ library(shinytest2)
 
 # Start the app from the bundled saved copy: pointing TW_LOCAL_DIR at a folder
 # without the IRCC files makes the read fail at once, so the app loads
-# data/cache.rds (the same path it takes when IRCC can't be reached).
-# The cache is never overwritten here (only live reads write it).
+# data/baseline.rds (the same path it takes when IRCC can't be reached and no
+# cache.rds exists yet). The baseline is never overwritten here.
 start_from_cache <- function() {
   withr::local_envvar(TW_LOCAL_DIR = file.path(tempdir(), "no-ircc-files-here"),
                       TW_TRIES = "1", TW_TIMEOUT = "5", .local_envir = parent.frame())
@@ -32,7 +33,7 @@ test_that("cold start from the bundled saved copy (app ready) is under 10 second
   bar <- gsub("\\s+", " ", paste(app$get_text(".status-bar"), collapse = " "))  # tidy spaces
   expect_match(bar, "Using saved data")
   expect_match(bar, "Latest month available: [A-Z][a-z]+ 20[0-9]{2}")
-  message(sprintf("Cold start from data/cache.rds: %.1f s (a live start adds the IRCC download; see test-live.R)", elapsed))
+  message(sprintf("Cold start from saved data (baseline/cache fallback): %.1f s (a live start adds the IRCC download; see test-live.R)", elapsed))
   expect_lt(elapsed, 10)
 })
 

@@ -68,14 +68,15 @@ if (nzchar(key)) {
 # ---- 3. Deploy only the files the app needs ----------------------------------
 # The raw IRCC files are NOT uploaded. By default the app shows the saved IRCC
 # release (data/baseline.rds); with TW_DATA_SOURCE=live it downloads the files at
-# startup and uses data/cache.rds only if the download fails or fails its checks.
+# startup and falls back to baseline (or to data/cache.rds if a prior live read
+# wrote one) when the download fails or fails its checks.
 app_files <- c("app.R",
                list.files("R", pattern = "\\.R$", full.names = TRUE),
                "www/styles.css",
                list.files("www/exports", full.names = TRUE),   # Downloads tab (built above)
-               "data/cache.rds",
                "data/baseline.rds",
                extra_files)
+if (file.exists("data/cache.rds")) app_files <- c(app_files, "data/cache.rds")
 # tryCatch(finally = ...) deletes the temporary .Renviron even if the upload
 # fails or times out (on.exit() does not run at the top level of a script).
 tryCatch(

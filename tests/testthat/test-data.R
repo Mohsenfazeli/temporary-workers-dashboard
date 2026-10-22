@@ -142,11 +142,10 @@ test_that("the data come only from the two IRCC CSV files", {
   expect_false(exists("IRCC_REFERENCE_URLS"))
   expect_setequal(names(BUNDLE), c("data", "detail", "meta"))
   expect_null(BUNDLE$meta$reference_urls)
-  for (f in c("baseline.rds", "cache.rds")) {
-    x <- readRDS(file.path(PROJECT, "data", f))
-    expect_setequal(names(x), c("data", "detail", "meta"))
-    expect_true(all(grepl("\\.csv$", x$meta$urls)))
-  }
+  x <- readRDS(file.path(PROJECT, "data", "baseline.rds"))
+  expect_setequal(names(x), c("data", "detail", "meta"))
+  expect_true(all(grepl("\\.csv$", x$meta$urls)))
+  expect_false(file.exists(file.path(PROJECT, "data", "cache.rds")))
   # No source file of the app reads Excel or any other data file
   code <- unlist(lapply(c(file.path(PROJECT, "app.R"),
                           list.files(file.path(PROJECT, "R"), full.names = TRUE)), readLines))

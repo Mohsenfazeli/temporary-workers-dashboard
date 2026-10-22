@@ -1,6 +1,6 @@
 # =============================================================================
 # tools/get_testdata.R: download the two IRCC CSV files into testdata/ so the
-# full test suite can run (the files are not part of the submission).
+# full test suite can run (testdata/ is gitignored).
 # Usage (from the project folder): Rscript tools/get_testdata.R
 # =============================================================================
 source("R/data.R")   # for IRCC_URLS and BROWSER_UA

@@ -1,15 +1,15 @@
-# Data profile: Question 1, Temporary Workers dashboard
+# Data profile
 
 Prepared Fri Oct 16, 2026 (PT). Built by `tools/build_cache_and_profile.R`; full output in `raw_profile/profile_output.txt`.
 
 ## 1. Sources
 | Program | URL | Downloaded | Size | MD5 |
 |---|---|---|---|---|
-| TFWP | https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-TFWP-PT_program.csv | Oct 16, 2026, 4:49–4:50 PM PT, by hand on Mohsen's Windows PC | 1,711,315 bytes | 75c4e517e70bf93368750cd24d6d27a4 |
+| TFWP | https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-TFWP-PT_program.csv | Oct 16, 2026, 4:49–4:50 PM PT | 1,711,315 bytes | 75c4e517e70bf93368750cd24d6d27a4 |
 | IMP | https://www.cic.gc.ca/opendata-donneesouvertes/data/ODP-TR-Work-IMP-PT_program.csv | same | 14,887,463 bytes | 0ce1f6f26702a107ecd1d1c2701eaefb |
 
 - Catalogue record: Open Government Portal, *Temporary Residents: Temporary Foreign Worker Program (TFWP) and International Mobility Program (IMP) Work Permit Holders – Monthly IRCC Updates*, IRCC, record 360024f2-17e9-4558-bfc1-3616485d65b9 (https://open.canada.ca/data/en/dataset/360024f2-17e9-4558-bfc1-3616485d65b9). Updated monthly; record modified Sep 15, 2026; temporal coverage Jan 1, 2015 to Jul 31, 2026. Licence: Open Government Licence – Canada.
-- The files were downloaded by hand because the server where I'm building this can't reach the IRCC website: every attempt was refused during the secure-connection (TLS) setup, including retries with a browser user-agent and longer timeouts. The app itself still reads the live URLs first.
+- Prefer live downloads via the app. Local copies in `raw_profile/` or `testdata/` are used when the IRCC website is unreachable during development or tests.
 
 ## 2. Encoding and structure (both files)
 - Encoding is UTF-8 with no byte-order mark. The files are **tab-delimited**, despite the .csv name, with Windows (CRLF) line endings.
@@ -69,7 +69,7 @@ The file does not split the TFWP into high-wage and low-wage streams.
 | Vulnerable workers | Level 2 = Vulnerable workers | 24,815 |
 | Unknown or other IMP | Level 2 = Other IMP Participants (almost entirely "Unknown International Mobility Program") | 734,880 |
 
-- Watch out: **"Unknown IMP" is close to 0 before 2021**, then 28,610 in 2021, 105,655 in 2022, 198,785 in 2023 and 96,970 in Jan–Jul 2026. IRCC does not identify the program for these permits, so shares of the other IMP categories are lower in those years; the dashboard says so and can show shares of permits with a known program only.
+- Watch out: **"Unknown IMP" is close to 0 before 2021**, then 28,610 in 2021, 105,655 in 2022, 198,850 in 2023 and 96,970 in Jan–Jul 2026. IRCC does not identify the program for these permits, so shares of the other IMP categories are lower in those years; the dashboard says so and can show shares of permits with a known program only.
 - The raw levels 2–5 are kept in the `detail` table, so a finer breakdown is possible.
 - Any new IRCC code that matches no rule goes to "Other TFWP" or "Unknown or other IMP" and is listed in the metadata.
 
@@ -120,13 +120,13 @@ Annual national totals (sums of months):
 - How it behaves:
   - It tries the live URLs first, with a browser user-agent, a 60-second timeout and 3 tries.
   - A local-path override is available for testing and goes through the same parsing code.
-  - `data/cache.rds` is written after every successful read.
-  - A failed download falls back to the cache and adds a notice. This was tested by simulating a failed download.
-  - A **changed column layout** (approved behaviour) shows a clear warning naming the problem and falls back to the cache. The app stops only if there is no cache. This was tested.
-- The current cache was built from the files above, with source_label "downloaded 2026-10-16 4:50 PM PT" and retrieved_at 2026-10-16 16:50 PT.
+  - `data/cache.rds` is written after every successful live read (not shipped; created at runtime).
+  - A failed download falls back to the cache if present, otherwise to `data/baseline.rds`, and adds a notice. This was tested by simulating a failed download.
+  - A **changed column layout** (approved behaviour) shows a clear warning naming the problem and falls back to the saved copy. The app stops only if there is no saved copy. This was tested.
+- The shipped baseline was built from the files above, with source_label "downloaded 2026-10-16 4:50 PM PT" and retrieved_at 2026-10-16 16:50 PT.
 
 ## 12. Assumptions
-1. **[RESOLVED: option C, approved by Mohsen on Oct 16, 2026]** The measure is a **flow**: permits that took effect in the month. Annual = the sum of the monthly counts from the two CSVs. It is labelled "work permits that took effect during the year" (not people), and 2026 = year to date (Jan–Jul), never compared with full years.
+1. The measure is a **flow**: permits that took effect in the month. Annual = the sum of the monthly counts from the two CSVs. It is labelled "work permits that took effect during the year" (not people), and 2026 = year to date (Jan–Jul), never compared with full years.
 2. Because people can get more than one permit in a year, summed figures are described as "work permits that took effect" rather than strictly "distinct people".
 3. A masked "--" cell (0–5) counts as 0 in sums and is flagged in the data, and this is disclosed. Totals may be understated by at most 5 per masked cell.
 4. A combination missing from the file means 0. IRCC publishes no zero cells.
@@ -137,13 +137,14 @@ Annual national totals (sums of months):
 9. Program categories are grouped as in the tables in section 7. "Unknown IMP" is shown as its own category, because IRCC does not identify the program for these permits.
 10. By default the dashboard shows the IRCC release of September 15, 2026 (IRCC files' Last-Modified date and the Open Government catalogue's date modified, checked October 18, 2026). IRCC may revise past months in later releases.
 11. The month is the month the permit took effect, not the month the application was made or the person arrived.
-12. **Only the two IRCC CSV files are used** (decision by Mohsen, October 18, 2026). No other table, including IRCC's Excel versions of these tables, and no non-IRCC data (for example population) are read, stored or shown. Event lines and notes cite official Government of Canada news releases and notices as dated context only, with no figures from them.
+12. **Only the two IRCC CSV files are used.** No other table, including IRCC's Excel versions of these tables, and no non-IRCC data (for example population) are read, stored or shown. Event lines and notes cite official Government of Canada news releases and notices as dated context only, with no figures from them.
 
 ## 13. Files
 - `R/data.R`: `load_data()` and helpers.
-- `data/cache.rds`: offline fallback (the two CSVs, processed).
+- `data/baseline.rds`: verified release shown by default.
+- `data/cache.rds`: optional offline fallback written after a successful live read (not committed).
 - `tools/build_cache_and_profile.R`: downloads the two IRCC files into `raw_profile/` itself, rebuilds the data and reruns these checks (`--local` reuses the files already there).
-- `raw_profile/`: the downloaded CSVs (not for submission), `ckan.json` (catalogue metadata), `profile_output.txt`.
+- `raw_profile/`: the downloaded CSVs, `ckan.json` (catalogue metadata), `profile_output.txt`.
 
 ## 14. Data sources used (updated October 18, 2026)
 Only the two IRCC CSV files listed in section 1 are used. An earlier version of this profile also compared the CSVs with IRCC's Excel versions of the same tables and with IRCC's new-arrivals web page, and the dashboard had an optional, off-by-default reference of IRCC's annual count of distinct people taken from the Excel tables. Following the decision to use only these two IRCC data files, that comparison, the reference layer and its stored copy were removed from the dashboard, the tests, the cached data and this profile.

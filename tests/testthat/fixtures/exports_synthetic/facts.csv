@@ -1,0 +1,5 @@
+id,value,display,rule,type
+synth_count,12345,"12,000",k,count
+synth_small,450,"500",h,count
+synth_pct,0.456,"46%",pct0,pct
+synth_millions,2345678,"2.35 million",M2,count

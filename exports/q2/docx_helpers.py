@@ -1,4 +1,4 @@
-"""Shared python-docx helpers for the Question 2 Word documents (Mohsen Fazeli)."""
+"""Shared python-docx helpers for the Downloads note Word document."""
 import re
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor, Emu

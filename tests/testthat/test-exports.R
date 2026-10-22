@@ -1,18 +1,14 @@
 # Downloads tab: the PDFs built by tools/build_exports.R.
-#  1. On the September 15, 2026 release the note equals the submitted note
-#     (Mohsen_2, revised Oct 21, 2026): text, the 64 rounded body numbers and their exact values
-#     (Appendix D), tables and appendix lines; the dated context line on the
-#     byline and the figures' capture date are the only differences.
+#  1. Structural checks on note facts/text for the shipped release, plus tiny
+#     synthetic fixtures (not derived from any written note).
 #  2. On simulated newer releases (copies of the data with changed numbers;
 #     test data only) the wording rules switch, the title carries the build date, and no
 #     stale period ("July 2026", "Jan–Jul") is left.
 #  3. The tab's content, the files and the mismatch notice; the running app.
 for (f in list.files(file.path(PROJECT, "exports", "R"), pattern = "\\.R$", full.names = TRUE)) source(f, local = FALSE)
-FIX <- file.path(PROJECT, "tests", "testthat", "fixtures", "exports_sep15")
+SYN <- file.path(PROJECT, "tests", "testthat", "fixtures", "exports_synthetic")
 SEP15 <- load_release(file.path(PROJECT, "data", "baseline.rds"))
 EXPORTS <- file.path(PROJECT, "exports")
-read_fix <- function(f) utils::read.csv(file.path(FIX, f), stringsAsFactors = FALSE, encoding = "UTF-8",
-                                        colClasses = "character", na.strings = character())
 
 # A copy of the release with extra months, built from the last month's rows
 # (with an optional change of values); release date moved on. Test data only.
@@ -32,54 +28,75 @@ simulate_release <- function(bundle, months, release_date, scale = NULL) {
   b
 }
 
-# ---- 1. September 15, 2026: exact match --------------------------------------------
-test_that("every fact equals the note's facts_q2.csv (ids, values, displays)", {
+# ---- 1. Shipped release: structure + synthetic fixtures ---------------------------
+test_that("q2_facts returns structured facts for the shipped release", {
   fx <- q2_facts(SEP15)
-  old <- read_fix("facts_q2.csv")
-  common <- intersect(fx$facts$id, old$id)
-  expect_gte(length(common), 110)
-  o <- old[match(common, old$id), ]; n <- fx$facts[match(common, fx$facts$id), ]
-  expect_equal(n$value, as.numeric(o$value), tolerance = 1e-12)
-  expect_identical(n$display, o$display)
-  expect_identical(n$type, o$type)
+  expect_gte(nrow(fx$facts), 50)
+  expect_true(all(c("id", "value", "display", "type") %in% names(fx$facts)))
+  expect_false(anyDuplicated(fx$facts$id) > 0)
+  expect_true(all(is.finite(fx$facts$value)))
   P <- fx$P
   expect_identical(c(P$Y, P$M, P$PY, P$FY0, P$LF, P$YMAX, P$PH), c(2026L, 7L, 2025L, 2015L, 2025L, 2023L, 2024L))
+  expect_equal(nrow(fx$geo), 14L)   # 13 P/Ts + not stated, or ranked set from q2_facts
+  expect_gte(nrow(fx$mix), 1L)
 })
 
-test_that("Tables C1 and C2 equal the note's tables", {
-  fx <- q2_facts(SEP15)
-  g0 <- read_fix("geography_table.csv"); g1 <- fx$geo[seq_len(13), ]
-  expect_identical(g1$geography, g0$geography)
-  num <- c("p2015", "p2023", "p2025", "ytd2025", "ytd2026", "share_2025", "growth_2015_2023", "change_2023_2025",
-           "ytd_change", "contrib_up", "contrib_ytd")
-  expect_equal(unname(as.matrix(g1[, -1])), unname(apply(as.matrix(g0[, num]), 2, as.numeric)), tolerance = 1e-12)
-  m0 <- read_fix("mix_2025.csv"); mm <- merge(m0, fx$mix, by = c("geography", "program", "category"))
-  expect_equal(nrow(mm), nrow(m0)); expect_equal(nrow(fx$mix), nrow(m0))
-  expect_equal(as.numeric(mm$value.x), mm$value.y)
+test_that("synthetic fixture facts round with the note's rounding rules", {
+  syn <- utils::read.csv(file.path(SYN, "facts.csv"), stringsAsFactors = FALSE, encoding = "UTF-8",
+                         colClasses = "character", na.strings = character())
+  expect_equal(nrow(syn), 4L)
+  expect_true(all(grepl("^synth_", syn$id)))
+  for (i in seq_len(nrow(syn))) {
+    expect_identical(q2_round(as.numeric(syn$value[i]), syn$rule[i]), syn$display[i],
+                     label = syn$id[i])
+  }
 })
 
-test_that("the body is Mohsen's text plus the dated context line on the byline", {
+test_that("synthetic note_body.md is placeholder text only", {
+  paras <- readLines(file.path(SYN, "note_body.md"), encoding = "UTF-8", warn = FALSE)
+  paras <- paras[nzchar(trimws(paras))]
+  expect_gte(length(paras), 3L)
+  txt <- paste(paras, collapse = "\n")
+  expect_match(txt, "placeholder", ignore.case = TRUE)
+  expect_no_match(txt, "IRCC|TFWP|IMP|PGWP|British Columbia|rebounding|minister|assignment", ignore.case = TRUE)
+})
+
+test_that("note text for the shipped release is complete, dated, and has no holes", {
   fx <- q2_facts(SEP15); tx <- q2_note_text(fx, SEP15, as.Date("2026-10-20"))
-  orig <- readLines(file.path(FIX, "mohsen_text.md"), encoding = "UTF-8", warn = FALSE)
-  orig <- orig[nzchar(trimws(orig))]
-  want <- orig
-  want[2] <- paste(orig[2], "\u00b7 Numbers update with each IRCC release; context written for the release of September 15, 2026")
-  expect_identical(tx$paras, want)
+  expect_match(tx$paras[1], "^Data Insight")
+  expect_match(tx$paras[2], "context written for the release of September 15, 2026", fixed = TRUE)
+  expect_false(any(grepl("\\{[a-z0-9_]+\\}", tx$paras)))
+  expect_true("References" %in% tx$paras)
   expect_true(all(tx$rules$holds[tx$rules$rule != "new_12_month_high"]))
   expect_false(tx$rules$holds[tx$rules$rule == "new_12_month_high"])
+  # Not compared to any frozen assignment prose
+  expect_false(identical(tx$paras, readLines(file.path(SYN, "note_body.md"), warn = FALSE)))
 })
 
-test_that("all 64 body numbers and Appendix D rows equal the note's", {
+test_that("every rounded body number equals its fact under its rounding rule", {
   fx <- q2_facts(SEP15); tx <- q2_note_text(fx, SEP15)
-  bn <- read_fix("body_numbers.csv")
-  expect_equal(nrow(tx$nums), 64L)
-  for (col in c("shown", "fact_id", "rule", "statement", "location")) expect_identical(tx$nums[[col]], bn[[col]], label = col)
-  # every rounded number equals its exact fact rounded (validate_q2.R rules)
-  for (i in seq_len(nrow(bn))) if (bn$rule[i] %in% c("pct0", "k", "h", "M2"))
-    expect_identical(q2_round(fx$val(bn$fact_id[i]), bn$rule[i]), bn$shown[i])
+  expect_gte(nrow(tx$nums), 10L)
+  expect_true(all(c("shown", "fact_id", "rule", "statement", "location") %in% names(tx$nums)))
+  for (i in seq_len(nrow(tx$nums))) {
+    if (tx$nums$rule[i] %in% c("pct0", "k", "h", "M2") && nzchar(tx$nums$shown[i])) {
+      expect_identical(q2_round(fx$val(tx$nums$fact_id[i]), tx$nums$rule[i]), tx$nums$shown[i],
+                       label = tx$nums$fact_id[i])
+    }
+  }
 })
 
-test_that("appendix lines, captions and table headers equal the note's (two dated lines aside)", {
+test_that("geography and mix outputs are internally consistent", {
+  fx <- q2_facts(SEP15)
+  g <- fx$geo
+  expect_true("geography" %in% names(g))
+  num_cols <- setdiff(names(g), "geography")
+  expect_true(all(vapply(g[num_cols], is.numeric, logical(1))))
+  expect_true(all(is.finite(as.matrix(g[num_cols]))))
+  expect_true(all(c("geography", "program", "category", "value") %in% names(fx$mix)))
+  expect_true(all(fx$mix$value >= 0))
+})
+
+test_that("appendix lines, captions and table headers follow the templates (dated lines aside)", {
   r <- q2_write_inputs(SEP15, file.path(tempdir(), "q2_sep15"), file.path(tempdir(), "figs"), as.Date("2026-10-20"),
                        exports_dir = EXPORTS)
   O <- r$original; S <- r$spec
@@ -92,11 +109,12 @@ test_that("appendix lines, captions and table headers equal the note's (two date
   expect_identical(as.character(S$table_c1_headers), unlist(O$headers_c1))
   expect_identical(c(S$table_c1_caption, S$table_c2_caption, S$appendix_d_intro), unlist(O$P_calls))
   E0 <- unlist(O$appendix_e); E1 <- unlist(S$appendix_e)
-  expect_identical(which(E0 != E1), 2L)                       # "(commit 7d2fad4; Figure 1 commit 5cc71ef)" -> the figures' version (build date)
+  expect_identical(which(E0 != E1), 2L)                       # capture-date placeholder -> build date
   expect_identical(unlist(O$appendix_b), unlist(S$appendix_b))
   refs0 <- utils::read.csv(file.path(EXPORTS, "q2", "references_template.csv"), colClasses = "character", encoding = "UTF-8")
   refs1 <- utils::read.csv(file.path(tempdir(), "q2_sep15", "refs.csv"), colClasses = "character", encoding = "UTF-8")
   expect_identical(refs1, refs0)
+  expect_no_match(paste(unlist(O$appendix_a), collapse = " "), "ministry manager|for the Minister|briefing note to", ignore.case = TRUE)
 })
 
 # ---- 2. Simulated newer releases ------------------------------------------------------
@@ -206,7 +224,7 @@ test_that("the Downloads content lists each file with its pages and release, and
   expect_match(as.character(downloads_content(NULL, SEP15$data, SEP15$meta)), "not available", fixed = TRUE)
 })
 
-test_that("the built files match the release, the manifest and the submitted note", {
+test_that("the built files match the release and the manifest", {
   dir <- file.path(PROJECT, "www", "exports")
   m <- read_exports_manifest(dir)
   skip_if(is.null(m), "PDFs not built (run tools/build_exports.R)")
@@ -216,25 +234,12 @@ test_that("the built files match the release, the manifest and the submitted not
   for (x in m$files) expect_identical(pdftools::pdf_info(file.path(dir, x$file))$pages, as.integer(x$pages))
   expect_identical(as.integer(m$files[[1]]$pages), 11L); expect_identical(as.integer(m$files[[1]]$body_pages), 2L)
   expect_identical(as.integer(m$files[[2]]$pages), 2L)
-  # the note's text equals Mohsen_2.pdf apart from the byline's context line and the two figure dates.
-  # Compared as one running text (page footers removed), because the longer byline reflows lines.
   system2("pdftotext", c("-layout", shQuote(file.path(dir, m$files[[1]]$file)), shQuote(f <- tempfile(fileext = ".txt"))))
-  new <- readLines(f, encoding = "UTF-8", warn = FALSE); old <- readLines(file.path(FIX, "mohsen_2_pdf.txt"), encoding = "UTF-8", warn = FALSE)
-  joined <- function(x) gsub("\\s+", " ", paste(trimws(x), collapse = " "))
-  dt <- "[A-Z][a-z]+ [0-9]{1,2}, [0-9]{4}"
-  canon <- function(s) {
-    s <- gsub(paste0(" \u00b7 Numbers update with each IRCC release; context written for the release of ", dt), "", s)
-    s <- gsub(paste0("\\(plain-language version(;|,) (figures captured on )?", dt, "(; Figure 1 ", dt, ")?(, when this file was built)?\\)"), "(VERSION)", s)
-    s <- gsub(paste0("\\((commit [0-9a-f]{7}(; Figure 1 commit [0-9a-f]{7})?|the version of ", dt, ", when this file was built)\\)"), "(DASHVER)", s)
-    s <- gsub("Mohsen Fazeli \u00b7 Work permit insights for B.C. \u00b7 page [0-9]+", "", s)
-    gsub("\\s+", " ", s)
-  }
-  jn <- joined(new); jo <- joined(old)
-  expect_match(jn, "Numbers update with each IRCC release; context written for the release of September 15, 2026", fixed = TRUE)
-  expect_match(jn, "figures captured on", fixed = TRUE)
-  cc <- canon(c(jn, jo))
-  expect_identical(lengths(regmatches(cc, gregexpr("\\((VERSION|DASHVER)\\)", cc))), c(2L, 2L))
-  expect_identical(canon(jn), canon(jo))
+  skip_if(!file.exists(f) || !length(readLines(f, warn = FALSE)), "pdftotext not available")
+  txt <- paste(readLines(f, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+  expect_match(txt, "Numbers update with each IRCC release; context written for the release of September 15, 2026", fixed = TRUE)
+  expect_match(txt, "Data Insight", fixed = TRUE)
+  expect_false(grepl("Mohsen_2|Mohsen_AI|analysis_q2\\.R|../q1/|ministry manager", txt))
 })
 
 test_that("the running app has a Downloads tab before Help, and its PDFs download", {

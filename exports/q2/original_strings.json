@@ -13,18 +13,18 @@
   "**One time frame:** the body compares January–July 2026 with January–July of earlier years (and full calendar years up to 2025); \"highest January–July in the data\" means above January–July of every year from 2015 to 2025.",
   "**Share of the increase** = a province's change in permits divided by Canada's change over the same months, as in the dashboard's chart of each province's share of Canada's change (Figure 2).",
   "**Permits vs. people:** permit counts are a flow and are never used as a count of temporary workers in Canada. Statistics Canada's non-permanent resident estimates [12] count people living in Canada on a date, so the two can move in opposite directions, as they do in 2025–2026.",
-  "**Unknown IMP check:** if PGWPs had only moved out of \"Unknown IMP\", that group would have fallen in 2026; it rose (checked in analysis_q2.R). Identified streams are still a lower bound for each stream, because some Unknown IMP permits may belong to any stream.",
+  "**Unknown IMP check:** if PGWPs had only moved out of \"Unknown IMP\", that group would have fallen in 2026; it rose (checked in exports/R/note_q2_facts.R). Identified streams are still a lower bound for each stream, because some Unknown IMP permits may belong to any stream.",
   "**Percentages** are recalculated from the raw counts and rounded once, from the exact value (B.C.'s +30.46% is shown as 30%); the appendix tables and Appendix D show them to one decimal.",
   "**Policy events** are dated context from official sources (Appendix B). The cohort explanation for the 2026 PGWP rise is labelled as untested, and the explanation for permits rising while people fall (new PGWPs go to graduates already in Canada [11]) as likely.",
-  "**Reader:** a ministry manager or executive who is not a data specialist; jargon is defined on first use."
+  "**Reader:** a non-specialist reader; jargon is defined on first use."
  ],
  "appendix_e": [
-  "analysis_q2.R opens the dashboard's data (IRCC open data release of September 15, 2026 (data to July 2026): the two CSV files, saved in ../q1/data/baseline.rds; no live download) with the dashboard's code (../q1/R/data.R, ../q1/R/calc.R), computes every number, and writes facts_q2.csv and the tables.",
-  "dashboard/Mohsen_2_dashboard_shots.R starts an unchanged copy of the dashboard (commit 7d2fad4; Figure 1 commit 5cc71ef) in a headless browser, sets the filters named under each figure and saves the dashboard card as a picture (tables/figure_register.csv lists each figure's card title and filters).",
-  "word/build_r2_docx.py builds this Word document (Mohsen_2.docx) from Mohsen's text (word/mohsen_text.md, used verbatim); tables/body_numbers.csv links each rounded number in it to facts_q2.csv. LibreOffice converts the document to Mohsen_2.pdf.",
-  "validate_q2.R recomputes every count from the IRCC data with independent base-R code, recalculates every percentage from its counts, checks that every number in the body is the rounded value of its fact, checks headline figures against the dashboard functions, and checks the word count, page count, citations, links and the Word file.",
+  "exports/R/note_q2_facts.R opens the dashboard's data (IRCC open data release of September 15, 2026 (data to July 2026): the two CSV files, saved in data/baseline.rds; no live download) with the dashboard's code (R/data.R, R/calc.R), computes every number, and writes facts.csv and the tables.",
+  "exports/R/capture.R starts an unchanged copy of the dashboard (commit 7d2fad4; Figure 1 commit 5cc71ef) in a headless browser, sets the filters named under each figure and saves the dashboard card as a picture.",
+  "exports/q2/build_note.py builds this Word document from the note text and facts; LibreOffice converts the document to PDF.",
+  "tests/testthat/test-exports.R checks that every number in the body is the rounded value of its fact and checks headline figures against the dashboard functions.",
   "Every script installs any missing R packages first. The Temporary Workers dashboard: https://mohsenfazeli.shinyapps.io/temporary-workers-dashboard/",
-  "AI use is described in the AI Disclosure Statement (Mohsen_AI.docx)."
+  "The optional Help assistant uses Google Gemini; it is not used to write this note."
  ],
  "appendix_b": [
   [
@@ -116,7 +116,7 @@
  "P_calls": [
   "**Table C1. Permits by province and territory** (ranked by 2025; growth figures for small territories rest on few permits and suppressed cells)",
   "**Table C2. Permits by stream, share of each geography's 2025 total** (B.C. relies more on employer-sponsored TFWP permits than Canada, Ontario or Alberta)",
-  "Every number in the note's body is rounded. This table gives, for each, the exact value from the two IRCC files (facts_q2.csv, made by analysis_q2.R) and where it can be found in the dashboard, or \"calculated from the IRCC files\" when the dashboard has no chart for it. Percentage changes are signed here; the body describes the direction in words (Table 1 shows it with a sign). validate_q2.R checks that each rounded number equals its exact value rounded."
+  "Every number in the note's body is rounded. This table gives, for each, the exact value from the two IRCC files (facts.csv, made by exports/R/note_q2_facts.R) and where it can be found in the dashboard, or \"calculated from the IRCC files\" when the dashboard has no chart for it. Percentage changes are signed here; the body describes the direction in words (Table 1 shows it with a sign). tests/testthat/test-exports.R checks that each rounded number equals its exact value rounded."
  ],
  "headers_c1": [
   "Province / territory",

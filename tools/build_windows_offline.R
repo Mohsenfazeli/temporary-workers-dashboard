@@ -3,8 +3,8 @@
 # Builds the two folders that make the Windows package run with nothing to
 # install: R-portable/ (the official R 4.5.0 for Windows from CRAN, unpacked
 # from its installer) and library/ (Windows binaries of every R package the
-# dashboard needs, at the exact versions in renv.lock). They go into the zip
-# only (deliverables/tools/build_1B.sh); they are never committed to git.
+# dashboard needs, at the exact versions in renv.lock). They go into the
+# offline Windows zip only; they are never committed to git.
 #
 #   Rscript tools/build_windows_offline.R <output folder> [<download cache>]
 #
