@@ -72,7 +72,7 @@ def picture(path, label, text, width=6.6, note=None):
 
 # ---- Body --------------------------------------------------------------------
 paras = [l for l in S["paras"] if l.strip()]
-H1 = {"Summary", "Background", "Findings", "Implications and next steps for B.C.", "Data notes", "References"}
+H1 = {"Summary", "Background", "Findings", "Open questions", "Data notes", "References"}
 FIG = {k: (v[0], float(v[1]), v[2]) for k, v in S["fig"].items()}
 SHORT_LINK = {r["n"]: r["url"] for r in refs}
 
