@@ -1,10 +1,8 @@
-"""build_note.py: the Question 2 note as a Word file, for the dashboard's Downloads tab.
+"""build_note.py: the Downloads note as a Word file for the dashboard.
 
-Same layout code as the note's own builder (q2 word/build_r2_docx.py, the version
-that made Mohsen_2.docx; October 21, 2026: Table 1, takeaway captions with the
-tab in small grey text, one bullet style), but every piece of text that
-depends on the data (body text, captions, appendix lines, tables) is read from
-a JSON spec written by exports/R/note_q2.R. No AI is used.
+Every piece of text that depends on the data (body text, captions, appendix
+lines, tables) is read from a JSON spec written by exports/R/note_q2_spec.R.
+No AI is used.
 Usage:  python3 build_note.py spec.json
 """
 import csv, json, re, sys, os

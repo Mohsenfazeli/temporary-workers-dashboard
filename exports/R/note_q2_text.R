@@ -1,22 +1,22 @@
 # =============================================================================
-# exports/R/note_q2_text.R: the Question 2 note's text for any IRCC release.
-# Mohsen's text (q2 word/mohsen_text.md, October 19, 2026) is the template:
+# exports/R/note_q2_text.R: the Downloads note's text for any IRCC release.
+# The frozen body in tests/testthat/fixtures/exports_sep15/note_body.md is the
+# template for the September 15, 2026 release:
 #   (a) numbers are filled in from the facts (exports/R/note_q2_facts.R), rounded
-#       as in the note (validate_q2.R rules: pct0, k, h, M2);
+#       as in the note (rules: pct0, k, h, M2);
 #   (b) words that state a direction or a comparison ("rose", "more than tripled",
 #       "falling faster in B.C.") are chosen by tested rules, with a plain
 #       fallback when a rule no longer holds;
 #   (c) context, causes and implications written for the September 15, 2026
 #       release are kept only while the facts they rely on still hold, and a
 #       dated line at the end of the Data notes says when they were written.
-# On the September 15, 2026 release the output is Mohsen's text plus that line.
 # =============================================================================
 
 Q2_CONTEXT_RELEASE <- as.Date("2026-09-15")     # the release the context was written for
-Q2_NOTE_WRITTEN    <- "October 19, 2026"        # date of Mohsen's text
+Q2_NOTE_WRITTEN    <- "October 19, 2026"        # date of the original note text
 Q2_FIGS_ORIGINAL   <- "dashboard shots of October 19, 2026"
 
-q2_r0 <- function(x) floor(x + 0.5)              # round half up (as validate_q2.R)
+q2_r0 <- function(x) floor(x + 0.5)              # round half up
 q2_round <- function(v, rule) {
   if (rule == "k" && abs(v) < 10000) rule <- "h"  # small counts: nearest hundred
   switch(rule,
@@ -399,7 +399,7 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
       sprintf("Numbers: %s; context written for the release of %s",
               if (is.na(release_date)) "the data shown" else paste("release of", fmt_date(release_date)), fmt_date(Q2_CONTEXT_RELEASE))
   # Title rule: "Data Insight – <the note's date>" (en dash, no subtitle), the
-  # same date as the byline: the date of Mohsen's text for the release it was
+  # same date as the byline: the original note date for the release it was
   # written for, otherwise the build date. The byline also names the data period.
   note_date <- if (context_release) Q2_NOTE_WRITTEN else fmt_date(build_date)
   title <- sprintf("Data Insight \u2013 %s", note_date)

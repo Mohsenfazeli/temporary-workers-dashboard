@@ -1,14 +1,12 @@
 # =============================================================================
-# exports/R/note_q2_facts.R: the numbers behind the Question 2 note, for any
-# IRCC release. Same definitions as the note's own analysis (q2 analysis_q2.R),
-# but every period is relative to the data instead of written as a year:
+# exports/R/note_q2_facts.R: the numbers behind the Downloads note, for any
+# IRCC release. Every period is relative to the data instead of written as a year:
 #   Y   = year of the latest month, M = its month number, PY = Y - 1
 #   FY0 = first full calendar year (2015), LF = last full year before Y (2025)
 #   YMAX = full year with the most permits (2023 in the Sep 15, 2026 release)
 #   PH  = earlier year with the most permits in the same months (Jan-M; 2024)
-# Fact ids keep the note's naming with the actual years (ca_2015, ca_ytd26...),
-# so on the September 15, 2026 release they are the same ids, values and
-# displays as the note's facts_q2.csv (checked by tests/testthat/test-exports.R).
+# Fact ids keep year-based naming (ca_2015, ca_ytd26...). On the September 15,
+# 2026 release they match tests/testthat/fixtures/exports_sep15/facts.csv.
 # Needs R/calc.R and R/data.R (sourced by the caller).
 # =============================================================================
 

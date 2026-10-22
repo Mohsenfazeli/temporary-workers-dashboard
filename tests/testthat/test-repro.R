@@ -6,14 +6,14 @@ test_that("the rebuild script reproduces the shipped release from the Sep 15 fil
   for (d in c("R", "data", "tools")) file.copy(file.path(PROJECT, d), tmp, recursive = TRUE)
   dir.create(file.path(tmp, "raw_profile"))
   file.copy(unname(LOCAL_CORE), file.path(tmp, "raw_profile"))
-  before <- tools::md5sum(file.path(tmp, "data", c("baseline.rds", "cache.rds")))
+  before <- tools::md5sum(file.path(tmp, "data", "baseline.rds"))
   out <- withr::with_dir(tmp, system2(file.path(R.home("bin"), "Rscript"),
                                       c("tools/build_cache_and_profile.R", "--local"), stdout = TRUE, stderr = TRUE))
   expect_null(attr(out, "status"))
   expect_true(any(grepl("all checks passed", out)))
   expect_true(any(grepl("RESULT: the rebuilt data are identical to data/baseline.rds", out, fixed = TRUE)))
   expect_true(any(grepl("data/ was not changed", out, fixed = TRUE)))
-  expect_equal(unname(tools::md5sum(file.path(tmp, "data", c("baseline.rds", "cache.rds")))), unname(before))
+  expect_equal(unname(tools::md5sum(file.path(tmp, "data", "baseline.rds"))), unname(before))
   expect_true(file.exists(file.path(tmp, "raw_profile", "rebuilt.rds")))
 })
 

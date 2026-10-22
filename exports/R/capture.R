@@ -4,7 +4,7 @@
 # (headless Chrome through shinytest2), so they always show the data the PDFs
 # are built from. Filters and periods come from the data (q2_fig_ranges()),
 # never from a hard-coded release.
-#   capture_note_figures(): the Question 2 note's figures (body and Appendix C)
+#   capture_note_figures(): the Downloads note's figures (body and Appendix C)
 #   capture_overview():     the Overview tab with numbered labels (How to use)
 # Only the display is changed for a capture (sidebar hidden, plot height set,
 # plotly toolbar hidden); the app code and data are not modified.
@@ -118,8 +118,8 @@ capture_note_figures <- function(project, out_dir, bundle) {
   invisible(file.path(out_dir, F))
 }
 
-#' Overview tab at 1600 x 900 (2x pixels), cropped and labelled 1-5 like the
-#' submitted user guide: 1 filters, 2 tabs, 3 headline cards, 4 chart tools, 5 notes.
+#' Overview tab at 1600 x 900 (2x pixels), cropped and labelled 1-5 for the
+#' how-to guide: 1 filters, 2 tabs, 3 headline cards, 4 chart tools, 5 notes.
 capture_overview <- function(project, path) {
   app <- exports_start_app(exports_app_copy(project), 1600, "exports_overview")
   on.exit(try(app$stop(), silent = TRUE), add = TRUE)
@@ -142,7 +142,7 @@ capture_overview <- function(project, path) {
   })()")
   res <- cs$Page$captureScreenshot(format = "png")
   raw <- tempfile(fileext = ".png"); writeBin(jsonlite::base64_dec(res$data), raw)
-  css_h <- 522 / 0.64                                    # same crop as the submitted guide
+  css_h <- 522 / 0.64                                    # crop height for the how-to guide
   img <- magick::image_read(raw)
   img <- magick::image_crop(img, magick::geometry_area(3200, round(css_h * 2), 0, 0))
   img <- magick::image_resize(img, "2000x")

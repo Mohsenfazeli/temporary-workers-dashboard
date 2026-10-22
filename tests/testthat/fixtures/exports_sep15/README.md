@@ -1,8 +1,8 @@
-Frozen copies from the Question 2 note (Mohsen_2.docx / Mohsen_2.pdf, October 19-20, 2026; revised October 21, 2026 after review),
-used by test-exports.R to check that the Downloads note, built from the
-September 15, 2026 release, matches the note exactly:
-- mohsen_text.md: Mohsen's body text (verbatim)
-- body_numbers.csv: the 64 rounded numbers (Table 1 included) of the body and the facts behind them (Appendix D)
-- facts_q2.csv: the note's facts (analysis_q2.R)
-- geography_table.csv, mix_2025.csv: Tables C1 and C2
-- mohsen_2_pdf.txt: text of Mohsen_2.pdf (pdftotext -layout)
+Frozen exports from the September 15, 2026 IRCC release, used by
+`tests/testthat/test-exports.R` to check that the Downloads note rebuilt from
+`data/baseline.rds` matches these expected values:
+
+- `note_body.md`: note body paragraphs (before the dated context line on the byline)
+- `body_numbers.csv`: the 64 rounded body numbers and the facts behind them (Appendix D)
+- `facts.csv`: fact ids, values and display strings from `exports/R/note_q2_facts.R`
+- `geography_table.csv`, `mix_2025.csv`: Tables C1 and C2

@@ -25,9 +25,9 @@ The package holds the dashboard's code, the processed data and the package list.
 
 # Run it on your own computer
 
-**Windows, nothing to install.** The offline Windows package (`Mohsen_1B2_offline_windows.zip`, about 200 MB: [github.com/Mohsenfazeli/temporary-workers-dashboard/releases/tag/v1.0-offline-windows](https://github.com/Mohsenfazeli/temporary-workers-dashboard/releases/tag/v1.0-offline-windows)) adds R `r v$r_version` for Windows (folder `R-portable/`, the official CRAN build) and every R package the dashboard needs (`library/`, the versions in `renv.lock`). Unzip it, open `temporary-workers-dashboard` and double-click `run_dashboard.bat`: the dashboard opens in your browser. Nothing is installed, and any R already on the computer is not used.
+**Windows, nothing to install.** The [offline Windows package](https://github.com/Mohsenfazeli/temporary-workers-dashboard/releases/tag/v1.0-offline-windows) (about 200 MB) adds R `r v$r_version` for Windows (folder `R-portable/`, the official CRAN build) and every R package the dashboard needs (`library/`, the versions in `renv.lock`). Unzip it, open `temporary-workers-dashboard` and double-click `run_dashboard.bat`: the dashboard opens in your browser. Nothing is installed, and any R already on the computer is not used.
 
-**Any computer with R** (Windows, macOS or Linux; the smaller package `Mohsen_1B2.zip`):
+**Any computer with R** (Windows, macOS or Linux; clone or download this repository):
 
 1. Install R from <a href="https://cloud.r-project.org">cloud.r-project.org</a> (R `r v$r_min` or newer; built and tested with R `r v$r_version`).
 2. Once, with internet, in R with the working folder set to `temporary-workers-dashboard` (`setwd("C:/path/to/temporary-workers-dashboard")`; `getwd()` should show it): `install.packages("renv")`, then `renv::restore()` for the exact versions. (Quicker alternative: `install.packages("shiny")`; the first `shiny::runApp()` then installs the other packages, about `r v$n_packages` in all.)
@@ -46,7 +46,7 @@ It then runs offline from the processed data in the package (`r v$release_short`
 | `R/assistant.R`, `R/mod_help.R` | Help tab: an optional AI assistant (Google Gemini) that answers from the dashboard's own text and figures, with limits on question length and number. It needs a Gemini API key in `GEMINI_API_KEY`, which is **not** included; without it the Help tab says the assistant is unavailable and everything else works. |
 | `R/mod_downloads.R`, `exports/`, `tools/build_exports.R` | Downloads tab and the three PDFs on it (this one, the user guide and the note on work permits for B.C.). `tools/build_exports.R` rebuilds them from the data with no AI; it needs Chrome, Python (python-docx) and LibreOffice. |
 | `R/theme.R`, `www/styles.css` | Colours, chart style, source lines, policy-event notes, page style. |
-| `data/baseline.rds`, `data/cache.rds` | The `r v$release_phrase`, processed; the dashboard shows the first; the second is used only in live mode if a download fails. |
+| `data/baseline.rds` | The `r v$release_phrase`, processed; shown by default. A `data/cache.rds` may be written after a successful live read and used if a later download fails. |
 | `run_dashboard.bat`, `tools/run_local.R`, `rebuild_data.bat` | Start the dashboard (add `live` for live data); rebuild the data from source (below). They install nothing. |
 | `R-portable/`, `library/`, `THIRD_PARTY_NOTICES.txt` | Offline Windows package only: R (GPL), the R packages (open-source licences that allow redistribution) and their licence notices. |
 | `renv.lock` | Exact package versions for `renv::restore()`. |

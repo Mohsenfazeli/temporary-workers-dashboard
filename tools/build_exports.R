@@ -1,8 +1,8 @@
 # =============================================================================
 # tools/build_exports.R: build the three PDF files of the Downloads tab from the
 # dashboard's data (data/baseline.rds), with no AI:
-#   1. the note "work permits in Canada and B.C." (Question 2 note; numbers,
-#      direction words and figures follow the data, see exports/R/note_q2_text.R)
+#   1. the note "work permits in Canada and B.C." (numbers, direction words
+#      and figures follow the data, see exports/R/note_q2_text.R)
 #   2. "How to use this dashboard"   3. "About the package and files"
 # Figures are pictures of this dashboard, taken from a temporary local copy in
 # headless Chrome. The note is built as Word by exports/q2/build_note.py

@@ -10,6 +10,8 @@ rsconnect/
 # Raw IRCC downloads (fetched by tools/get_testdata.R)
 testdata/
 raw_profile/
+# Live-mode cache (written after a successful download; baseline.rds is the shipped copy)
+data/cache.rds
 # Downloads PDFs (built by tools/build_exports.R before each deploy)
 www/exports/
 __pycache__/

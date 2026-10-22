@@ -3,7 +3,7 @@
 # needs, written to one folder: facts.csv, nums.csv, refs.csv, geo.csv, mix.csv
 # and spec.json (text, captions, appendix lines). Appendix lines that do not
 # depend on the data are read unchanged from exports/q2/original_strings.json
-# (taken from the note's own builder).
+# (static appendix wording).
 # =============================================================================
 
 q2_fig_files <- c(f1 = "dash_fig1_overview_headline_samemonths.png", f2 = "dash_fig2_geography_contribution_bc.png",

@@ -2,7 +2,7 @@
 # exports/R/docs.R: the two dashboard documents on the Downloads tab,
 # "How to use this dashboard" and "About the package and files", from the
 # templates in exports/docs/ (R Markdown -> HTML -> PDF printed by headless
-# Chrome, the same route as the submitted user guide). Every date, period and
+# Chrome). Every date, period and
 # count in them comes from the data or the project files.
 # =============================================================================
 

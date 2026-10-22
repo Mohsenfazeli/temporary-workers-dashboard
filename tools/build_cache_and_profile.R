@@ -8,9 +8,9 @@
 # Run from the project folder (no manual download needed):
 #   Rscript tools/build_cache_and_profile.R            download, rebuild, check
 #   Rscript tools/build_cache_and_profile.R --local    use the files already in raw_profile/
-#   Rscript tools/build_cache_and_profile.R --install  also replace data/cache.rds and
-#                                                      data/baseline.rds (maintainers only;
-#                                                      then set RELEASE_INFO in R/data.R)
+#   Rscript tools/build_cache_and_profile.R --install  also replace data/baseline.rds
+#                                                      (maintainers only; then set
+#                                                      RELEASE_INFO in R/data.R)
 # Without --install nothing in data/ is changed: the rebuilt data go to
 # raw_profile/rebuilt.rds, so the dashboard keeps showing the shipped release.
 # IRCC replaces the files at the same URLs with each release, so a download
@@ -171,9 +171,10 @@ if (do_install) {
   # The same verified data become the baseline that every later live download
   # is checked against (R/data.R, check_against_baseline). Never written by the app.
   # It is also the dated release the app shows by default (load_release).
-  file.copy(out_path, "data/cache.rds", overwrite = TRUE)
+  # data/cache.rds is runtime-only (written after a successful live read).
   file.copy(out_path, "data/baseline.rds", overwrite = TRUE)
-  cat("\nInstalled as data/cache.rds and data/baseline.rds.",
+  unlink("data/cache.rds")
+  cat("\nInstalled as data/baseline.rds (removed any stale data/cache.rds).",
       "NOW set RELEASE_INFO in R/data.R to IRCC's date for this release",
       "(the Last-Modified date above), then run Rscript tools/build_exports.R.\n")
 } else {
