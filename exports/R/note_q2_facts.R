@@ -5,8 +5,7 @@
 #   FY0 = first full calendar year (2015), LF = last full year before Y (2025)
 #   YMAX = full year with the most permits (2023 in the Sep 15, 2026 release)
 #   PH  = earlier year with the most permits in the same months (Jan-M; 2024)
-# Fact ids keep year-based naming (ca_2015, ca_ytd26...). On the September 15,
-# 2026 release they match tests/testthat/fixtures/exports_sep15/facts.csv.
+# Fact ids keep year-based naming (ca_2015, ca_ytd26...).
 # Needs R/calc.R and R/data.R (sourced by the caller).
 # =============================================================================
 

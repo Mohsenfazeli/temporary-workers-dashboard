@@ -1,7 +1,5 @@
 # =============================================================================
 # exports/R/note_q2_text.R: the Downloads note's text for any IRCC release.
-# The frozen body in tests/testthat/fixtures/exports_sep15/note_body.md is the
-# template for the September 15, 2026 release:
 #   (a) numbers are filled in from the facts (exports/R/note_q2_facts.R), rounded
 #       as in the note (rules: pct0, k, h, M2);
 #   (b) words that state a direction or a comparison ("rose", "more than tripled",
@@ -150,8 +148,8 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
                if (rebound && pgwp_drive) ", led by graduates" else "",
                if (tfwp_faster) ", while employer-sponsored permits fall faster in B.C. than nationally." else
                  if (bc_tfwp < 0) ", while employer-sponsored permits fall in B.C." else ".",
-               if (bc_all_grads) " B.C.’s growth now rests on graduates, whose routes to permanent residence have narrowed [10]; how many stay is the key planning question." else
-                 " Routes to permanent residence for graduates have narrowed [10]; how many stay is a key planning question.")
+               if (bc_all_grads) " B.C.’s growth now rests on graduates, whose routes to permanent residence have narrowed [10]; how many stay is an open question." else
+                 " Routes to permanent residence for graduates have narrowed [10]; how many stay is an open question.")
   s_b1_lead <- if (rebound && statcan) "Permits are rebounding, but the temporary population is not." else
     if (rebound) "Permits are rebounding." else "Permits are falling."
   s_b1 <- paste0("- ", s_b1_lead, " Permits ", ud(ca_chg), " ",
@@ -205,7 +203,7 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
                  if (same_dir) "" else paste0(" ", ud(ca_tfwp, "rise", "fall")), " nationally.")
 
   # ---- Background -------------------------------------------------------------
-  bg1 <- sprintf("This note uses Immigration, Refugees and Citizenship Canada (IRCC) work permit data [1, 2], analysed in the accompanying dashboard [13], to inform B.C. labour market and skills planning, including the B.C. Labour Market Outlook [3]. The data, from IRCC’s open data release of %s, count permits issued each month, by intended province, from %s to %s [1, 2]. %s Policy events are context: the data show timing, not cause. Figures are rounded; exact values are in Appendix D.",
+  bg1 <- sprintf("This note uses Immigration, Refugees and Citizenship Canada (IRCC) work permit data [1, 2], analysed in the accompanying dashboard [13], with B.C. as the focus geography, alongside the B.C. Labour Market Outlook [3]. The data, from IRCC’s open data release of %s, count permits issued each month, by intended province, from %s to %s [1, 2]. %s Policy events are context: the data show timing, not cause. Figures are rounded; exact values are in Appendix D.",
                  if (is.na(release_date)) fmt_date(Sys.Date()) else fmt_date(release_date), fmt_month(P$first), fmt_month(P$latest),
                  if (P$M == 12) sprintf("%d is compared with %d.", Y, PY) else sprintf("%s is compared with the same months of %d.", YL(Y), PY))
   bg2 <- "The TFWP lets employers hire foreign workers, usually after a Labour Market Impact Assessment (LMIA) shows no Canadian is available; this note calls these permits employer-sponsored, split into farm permits (agricultural streams) and non-farm permits (IRCC’s “other workers with an LMIA”). The International Mobility Program (IMP) needs no LMIA; it covers PGWPs for graduates of Canadian institutions [11], spouses and youth exchanges."
@@ -368,16 +366,16 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
                 if (tfwp_heavier && bc_tfwp < 0) ", so this decline weighs more on B.C." else if (tfwp_heavier) ", so these permits matter more for B.C." else ".")
   f6 <- paste(f6_lead, f6b, f6c, f6d)
 
-  # ---- Implications, by priority: graduate retention first ---------------------
-  i1 <- paste0("- Find out how many graduates stay. ",
+  # ---- Open questions the release leaves unanswered ------------------------------
+  i1 <- paste0("- How many graduates stay? ",
                if (bc_all_grads) sprintf("Graduates account for more than all of B.C.’s growth in %d (Table 1). ", Y) else "",
-               "The study permit cap may shrink future graduating classes, and routes to permanent residence have narrowed: the 2025 BC Provincial Nominee Program allocation was cut and its international post-graduate stream closed [10]. An IRCC data request for PGWPs by B.C. economic region and institution would show how many graduates stay, and where, helping test whether their skills match high-opportunity occupations.")
-  i2 <- paste0("- Identify sectors ", if (bc_lmia_down) "losing" else "gaining", " employer-sponsored workers. IRCC’s TFWP tables by occupation would show which B.C. occupations account for the ",
+               "The study permit cap may shrink future graduating classes, and routes to permanent residence have narrowed: the 2025 BC Provincial Nominee Program allocation was cut and its international post-graduate stream closed [10]. PGWP counts by B.C. economic region and institution are not in these open files, so retention and skill match cannot be read from this release alone.")
+  i2 <- paste0("- Which sectors account for the ", if (bc_lmia_down) "fall" else "rise", " in employer-sponsored workers? IRCC’s TFWP tables by occupation would show which B.C. occupations account for the ",
                reg(46, "bc_lmia_ytd_change", "pct0", sprintf("Non-farm employer-sponsored permits, B.C., %s", ytd_pair), "Figure C6"),
                if (bc_lmia_down) " fall" else " rise", " in non-farm permits.")
-  i3 <- paste0("- Track temporary labour supply monthly. The Outlook expects temporary residents to flow out of B.C. over 2025–2035 [3]",
+  i3 <- paste0("- How do monthly permits line up with the temporary population? The Outlook expects temporary residents to flow out of B.C. over 2025–2035 [3]",
                if (statcan) "; the falling temporary population [12] fits this." else ".",
-               " Reading monthly IRCC permits with Statistics Canada population estimates would show early if supply strays from that path.")
+               " Comparing monthly IRCC permits with Statistics Canada population estimates would show whether supply is moving with that path.")
 
   # ---- Data notes (the Unknown IMP check is here) --------------------------------
   calc <- "Calculated from the IRCC files"
@@ -425,7 +423,7 @@ q2_note_text <- function(fx, bundle, build_date = Sys.Date()) {
              h2, f3, f4, h3, f5,
              "[TABLE 1]", t1_cap, t1_head, t1_rows,
              "[FIGURE 2: horizontal bars, each province’s share of Canada’s increase, B.C. highlighted]", fig2_cap,
-             f6, "Implications and next steps for B.C.", i1, i2, i3, "Data notes", dn1, "References", refs_lines)
+             f6, "Open questions", i1, i2, i3, "Data notes", dn1, "References", refs_lines)
   nums <- do.call(rbind, rows)
   nums <- nums[order(nums$order), ]
   # every registered phrase must be in the text (table rows without their "|"; "−" read as "-")
