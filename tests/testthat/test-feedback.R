@@ -64,7 +64,7 @@ test_that("event markers: six dated events, each with an official source", {
   expect_match(IN_CANADA_NOTE$url, "supplementary-immigration-levels-2026-2028", fixed = TRUE)
 })
 
-test_that("'What the data show' points are computed from the data and match the Q2 note", {
+test_that("'What the data show' points are computed from the data and match the Downloads note", {
   h <- release_highlights(d, latest)
   expect_length(h, 4)
   expect_match(h[1], "about 4 in 5 work permits: 77.9% from January 2015 to July 2026, and 83.2%", fixed = TRUE)
